@@ -4,8 +4,9 @@ services:
       context: ./backend
     container_name: sovenok-backend
     restart: always
-    env_file:
-      - .env
+    environment:
+      DATABASE_URL: postgresql://sovenok:sovenok@postgres:5432/sovenok
+      ADMIN_ID: 8707664475
     ports:
       - "8000:8000"
     depends_on:
