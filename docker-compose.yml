@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: sovenok-backend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sovenok-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sovenok
+      POSTGRES_USER: sovenok
+      POSTGRES_PASSWORD: sovenok
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
