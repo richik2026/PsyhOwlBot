@@ -3,7 +3,8 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.admins.service import appoint_admin
+from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
+from app.admins.service import appoint_admin, get_admin_by_telegram_id
 from app.referrals.service import build_referral_url, get_or_create_admin_referral
 
 router = Router()
@@ -42,9 +43,22 @@ async def admin_command(message: Message, session: AsyncSession):
             "будут учитываться в твоей статистике 📈",
         )
 
+        await session.commit()
         await message.answer("Администратор назначен и ссылка отправлена 🦉")
 
     except PermissionError:
         await message.answer("Недостаточно прав")
     except Exception as exc:
         await message.answer(f"Ошибка назначения администратора: {exc}")
+
+
+@router.message(Command("my_stats"))
+async def my_stats(message: Message, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, message.from_user.id)
+
+    if admin is None or not admin.is_active:
+        await message.answer("Эта команда доступна только администраторам")
+        return
+
+    data = await get_admin_dashboard(session, admin)
+    await message.answer(format_admin_dashboard(data))
