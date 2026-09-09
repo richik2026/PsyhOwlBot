@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 
 from app.bot.router import router
+from app.bot.middlewares.database import DatabaseMiddleware
 
 
 async def main() -> None:
@@ -14,6 +15,11 @@ async def main() -> None:
 
     bot = Bot(token=token, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
+
+    db_middleware = DatabaseMiddleware()
+    dp.message.middleware(db_middleware)
+    dp.callback_query.middleware(db_middleware)
+
     dp.include_router(router)
 
     await dp.start_polling(bot)
