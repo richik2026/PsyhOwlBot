@@ -6,6 +6,7 @@ import socket
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 
 from app.bot.router import router
@@ -18,35 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 class DualStackAiohttpSession(AiohttpSession):
-    """Aiogram HTTP session that allows both IPv4 and IPv6 for Telegram."""
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Do not force IPv4. Let aiohttp use the address family that works on
-        # the hosting provider. This can use IPv6 when the IPv4 route to
-        # api.telegram.org is unreliable.
         self._connector_init["family"] = socket.AF_UNSPEC
 
 
-async def connect_telegram(bot: Bot, mode: str):
-    """Keep trying Telegram connection when the hosting provider drops traffic."""
+async def connect_telegram(bot: Bot):
     attempt = 0
     while True:
         try:
             me = await bot.get_me()
-            logger.info(
-                "Telegram connected successfully: @%s (id=%s)",
-                me.username,
-                me.id,
-            )
+            logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
             return
         except Exception as e:
             attempt += 1
-            logger.warning(
-                "Telegram connection attempt %s failed (%s). Retry in 10 seconds...",
-                attempt,
-                e,
-            )
+            logger.warning("Telegram connection attempt %s failed (%s). Retry in 10 seconds...", attempt, e)
             await asyncio.sleep(10)
 
 
@@ -55,24 +42,22 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable is required")
 
-    proxy = os.getenv("TELEGRAM_PROXY", "").strip() or None
+    local_api = os.getenv("TELEGRAM_LOCAL_API", "http://telegram-bot-api:8081")
+    server = TelegramAPIServer.from_base(local_api)
 
-    if proxy:
-        logger.info("Telegram connection mode: configured proxy")
-        session = AiohttpSession(proxy=proxy, timeout=90.0)
-    else:
-        logger.info("Telegram connection mode: dual-stack IPv4/IPv6")
-        session = DualStackAiohttpSession(timeout=90.0)
+    logger.info("Telegram API mode: local server %s", local_api)
 
-    logger.info("Telegram connection check. Token length: %s", len(token))
+    session = DualStackAiohttpSession(timeout=90.0)
 
     bot = Bot(
         token=token,
         session=session,
+        server=server,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    await connect_telegram(bot, "proxy" if proxy else "dual-stack")
+    logger.info("Telegram connection check. Token length: %s", len(token))
+    await connect_telegram(bot)
 
     dp = Dispatcher()
 
