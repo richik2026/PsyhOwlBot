@@ -6,7 +6,6 @@ import socket
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 
 from app.bot.router import router
@@ -18,10 +17,27 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class DualStackAiohttpSession(AiohttpSession):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._connector_init["family"] = socket.AF_UNSPEC
+async def check_telegram_network():
+    """Diagnostic check: verify that container can resolve and reach Telegram."""
+    try:
+        addresses = await asyncio.to_thread(socket.getaddrinfo, "api.telegram.org", 443)
+        logger.info("Telegram DNS resolved: %s addresses", len(addresses))
+
+        for family, _, _, _, sockaddr in addresses:
+            try:
+                sock = socket.socket(family, socket.SOCK_STREAM)
+                sock.settimeout(5)
+                await asyncio.to_thread(sock.connect, sockaddr)
+                sock.close()
+                logger.info("Telegram TCP connection OK: %s", sockaddr)
+                return True
+            except Exception as e:
+                logger.warning("Telegram TCP connection failed: %s", e)
+
+    except Exception as e:
+        logger.error("Telegram network diagnostic failed: %s", e)
+
+    return False
 
 
 async def connect_telegram(bot: Bot):
@@ -33,7 +49,11 @@ async def connect_telegram(bot: Bot):
             return
         except Exception as e:
             attempt += 1
-            logger.warning("Telegram connection attempt %s failed (%s). Retry in 10 seconds...", attempt, e)
+            logger.warning(
+                "Telegram connection attempt %s failed (%s). Retry in 10 seconds...",
+                attempt,
+                e,
+            )
             await asyncio.sleep(10)
 
 
@@ -42,17 +62,14 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable is required")
 
-    local_api = os.getenv("TELEGRAM_LOCAL_API", "http://telegram-bot-api:8081")
-    server = TelegramAPIServer.from_base(local_api)
+    logger.info("Telegram API mode: direct aiogram session")
+    await check_telegram_network()
 
-    logger.info("Telegram API mode: local server %s", local_api)
-
-    session = DualStackAiohttpSession(timeout=90.0)
+    session = AiohttpSession(timeout=90.0)
 
     bot = Bot(
         token=token,
         session=session,
-        server=server,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
