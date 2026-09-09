@@ -2,7 +2,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: sovenok-backend
     restart: always
     command: python main.py
     environment:
@@ -20,7 +19,6 @@ services:
   bot:
     build:
       context: ./backend
-    container_name: sovenok-bot
     restart: always
     command: sh start_bot.sh
     environment:
@@ -36,7 +34,6 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: sovenok-postgres
     restart: always
     environment:
       POSTGRES_DB: sovenok
