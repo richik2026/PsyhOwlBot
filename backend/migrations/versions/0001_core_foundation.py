@@ -34,9 +34,11 @@ def upgrade() -> None:
         sa.Column("first_name", sa.String(length=255), nullable=True),
         sa.Column("referrer_admin_id", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(["referrer_admin_id"], ["admins.id"], ondelete="SET NULL"),
         sa.UniqueConstraint("telegram_id", name="uq_users_telegram_id"),
     )
     op.create_index("ix_users_telegram_id", "users", ["telegram_id"])
+    op.create_index("ix_users_referrer_admin_id", "users", ["referrer_admin_id"])
 
     op.create_table(
         "settings",
@@ -69,6 +71,7 @@ def downgrade() -> None:
     op.drop_index("ix_settings_key", table_name="settings")
     op.drop_table("settings")
 
+    op.drop_index("ix_users_referrer_admin_id", table_name="users")
     op.drop_index("ix_users_telegram_id", table_name="users")
     op.drop_table("users")
 
