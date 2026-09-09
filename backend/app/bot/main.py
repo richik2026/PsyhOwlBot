@@ -3,6 +3,8 @@ import logging
 import os
 import socket
 
+import aiohttp
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def check_telegram_network():
-    """Diagnostic check: verify that container can resolve and reach Telegram."""
+    """Diagnostic check: verify DNS, TCP and HTTPS access to Telegram."""
     try:
         addresses = await asyncio.to_thread(socket.getaddrinfo, "api.telegram.org", 443)
         logger.info("Telegram DNS resolved: %s addresses", len(addresses))
@@ -30,14 +32,19 @@ async def check_telegram_network():
                 await asyncio.to_thread(sock.connect, sockaddr)
                 sock.close()
                 logger.info("Telegram TCP connection OK: %s", sockaddr)
-                return True
+                break
             except Exception as e:
                 logger.warning("Telegram TCP connection failed: %s", e)
+        else:
+            logger.error("All Telegram TCP connection attempts failed")
+
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get("https://api.telegram.org") as response:
+                logger.info("Telegram HTTPS check OK: status=%s", response.status)
 
     except Exception as e:
         logger.error("Telegram network diagnostic failed: %s", e)
-
-    return False
 
 
 async def connect_telegram(bot: Bot):
