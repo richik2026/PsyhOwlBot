@@ -28,7 +28,6 @@ services:
       - TRIBUTE_API_KEY
       - OPENAI_API_KEY
       - TELEGRAM_PROXY
-      - TELEGRAM_FALLBACK_PROXY
     depends_on:
       - postgres
       - backend
