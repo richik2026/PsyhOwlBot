@@ -2,6 +2,7 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from app.bot.router import router
@@ -14,7 +15,12 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable is required")
 
-    bot = Bot(token=token, parse_mode=ParseMode.HTML)
+    bot = Bot(
+        token=token,
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML
+        )
+    )
     dp = Dispatcher()
 
     db_middleware = DatabaseMiddleware()
