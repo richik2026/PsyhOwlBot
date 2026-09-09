@@ -24,25 +24,6 @@ async def check_telegram_network():
     try:
         addresses = await asyncio.to_thread(socket.getaddrinfo, "api.telegram.org", 443)
         logger.info("Telegram DNS resolved: %s addresses", len(addresses))
-
-        for family, _, _, _, sockaddr in addresses:
-            try:
-                sock = socket.socket(family, socket.SOCK_STREAM)
-                sock.settimeout(5)
-                await asyncio.to_thread(sock.connect, sockaddr)
-                sock.close()
-                logger.info("Telegram TCP connection OK: %s", sockaddr)
-                break
-            except Exception as e:
-                logger.warning("Telegram TCP connection failed: %s", e)
-        else:
-            logger.error("All Telegram TCP connection attempts failed")
-
-        timeout = aiohttp.ClientTimeout(total=10)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get("https://api.telegram.org") as response:
-                logger.info("Telegram HTTPS check OK: status=%s", response.status)
-
     except Exception as e:
         logger.error("Telegram network diagnostic failed: %s", e)
 
@@ -69,10 +50,16 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable is required")
 
-    logger.info("Telegram API mode: direct aiogram session")
-    await check_telegram_network()
+    proxy = os.getenv("TELEGRAM_PROXY")
 
-    session = AiohttpSession(timeout=90.0)
+    if proxy:
+        logger.info("Telegram API mode: SOCKS5 proxy enabled")
+        session = AiohttpSession(proxy=proxy, timeout=90.0)
+    else:
+        logger.info("Telegram API mode: direct aiogram session")
+        session = AiohttpSession(timeout=90.0)
+
+    await check_telegram_network()
 
     bot = Bot(
         token=token,
