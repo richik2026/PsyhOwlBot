@@ -1,5 +1,7 @@
 from typing import Optional
 
+from sqlalchemy import select
+
 from app.users.models import User
 
 
@@ -11,9 +13,8 @@ async def get_or_create_user(
 ) -> User:
     """Return existing user or create a new Telegram user."""
 
-    user = await session.scalar(
-        User.__table__.select().where(User.telegram_id == telegram_id)
-    )
+    stmt = select(User).where(User.telegram_id == telegram_id)
+    user = await session.scalar(stmt)
 
     if user:
         return user
