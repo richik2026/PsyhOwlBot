@@ -5,3 +5,4 @@ sqlalchemy>=2.0
 asyncpg
 alembic
 aiogram>=3.0
+aiohttp-socks
