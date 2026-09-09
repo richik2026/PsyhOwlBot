@@ -4,6 +4,8 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.service import create_admin, is_super_admin
+from app.admin.referral_generator import build_referral_link
+from app.referrals.service import create_referral_link
 
 router = Router()
 
@@ -27,9 +29,15 @@ async def admin_command(message: Message, db_session: AsyncSession):
         telegram_id=user_id,
     )
 
-    await message.answer(
-        "Администратор успешно добавлен 🦉"
+    referral_link = build_referral_link(user_id)
+
+    await create_referral_link(
+        session=db_session,
+        admin_id=user_id,
+        link=referral_link,
     )
+
+    await message.answer("Администратор успешно добавлен 🦉")
 
     try:
         await message.bot.send_message(
@@ -37,7 +45,7 @@ async def admin_command(message: Message, db_session: AsyncSession):
             text=(
                 "Добро пожаловать в семью🦉\n\n"
                 "Твоя персональная ссылка:\n\n"
-                "...\n\n"
+                f"{referral_link}\n\n"
                 "Все пользователи, которые придут по ней и оформят подписку, "
                 "будут учитываться в твоей статистике 📈"
             ),
