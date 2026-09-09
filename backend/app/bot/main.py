@@ -1,9 +1,12 @@
 import asyncio
-import os
 import logging
+import os
+import socket
 
+from aiohttp import ClientTimeout, TCPConnector
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 
 from app.bot.router import router
@@ -20,10 +23,24 @@ async def main() -> None:
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable is required")
 
+    proxy = os.getenv("TELEGRAM_PROXY", "").strip() or None
+    timeout = ClientTimeout(total=90, connect=30, sock_connect=30, sock_read=60)
+
+    # Variant 1: direct Telegram connection, forced to IPv4.
+    # Variant 2: if TELEGRAM_PROXY is configured in Timeweb, use that proxy.
+    if proxy:
+        logger.info("Telegram connection mode: proxy")
+        session = AiohttpSession(proxy=proxy, timeout=timeout)
+    else:
+        logger.info("Telegram connection mode: direct IPv4")
+        connector = TCPConnector(family=socket.AF_INET)
+        session = AiohttpSession(connector=connector, timeout=timeout)
+
     logger.info("Telegram connection check. Token length: %s", len(token))
 
     bot = Bot(
         token=token,
+        session=session,
         default=DefaultBotProperties(
             parse_mode=ParseMode.HTML
         )
@@ -31,9 +48,13 @@ async def main() -> None:
 
     try:
         me = await bot.get_me()
-        logger.info("Telegram connected successfully: @%s", me.username)
+        logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
     except Exception as e:
-        logger.exception("Telegram connection failed: %s", e)
+        logger.exception(
+            "Telegram connection failed. mode=%s error=%s",
+            "proxy" if proxy else "direct IPv4",
+            e,
+        )
         raise
 
     dp = Dispatcher()
