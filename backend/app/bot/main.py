@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 
 from app.bot.router import router
 from app.bot.middlewares.database import DatabaseMiddleware
+from app.scheduler.service import daily_reports_loop
 
 
 async def main() -> None:
@@ -22,7 +23,13 @@ async def main() -> None:
 
     dp.include_router(router)
 
-    await dp.start_polling(bot)
+    scheduler_task = asyncio.create_task(daily_reports_loop(bot))
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        scheduler_task.cancel()
+        await bot.session.close()
 
 
 if __name__ == "__main__":
