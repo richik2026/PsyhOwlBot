@@ -5,6 +5,7 @@ from app.admins.models import Admin
 from app.referrals.models import ReferralLink
 from app.settings.models import Setting
 from app.reels.models import AdminReels
+from app.sales.models import Sale
 
 __all__ = [
     "User",
@@ -12,4 +13,5 @@ __all__ = [
     "ReferralLink",
     "Setting",
     "AdminReels",
+    "Sale",
 ]
