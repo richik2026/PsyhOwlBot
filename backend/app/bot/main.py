@@ -17,21 +17,28 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class IPv4AiohttpSession(AiohttpSession):
-    """Aiogram HTTP session that forces direct Telegram traffic through IPv4."""
+class DualStackAiohttpSession(AiohttpSession):
+    """Aiogram HTTP session that allows both IPv4 and IPv6 for Telegram."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._connector_init["family"] = socket.AF_INET
+        # Do not force IPv4. Let aiohttp use the address family that works on
+        # the hosting provider. This can use IPv6 when the IPv4 route to
+        # api.telegram.org is unreliable.
+        self._connector_init["family"] = socket.AF_UNSPEC
 
 
 async def connect_telegram(bot: Bot, mode: str):
-    """Keep trying Telegram connection when hosting provider drops outbound traffic."""
+    """Keep trying Telegram connection when the hosting provider drops traffic."""
     attempt = 0
     while True:
         try:
             me = await bot.get_me()
-            logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
+            logger.info(
+                "Telegram connected successfully: @%s (id=%s)",
+                me.username,
+                me.id,
+            )
             return
         except Exception as e:
             attempt += 1
@@ -51,11 +58,11 @@ async def main() -> None:
     proxy = os.getenv("TELEGRAM_PROXY", "").strip() or None
 
     if proxy:
-        logger.info("Telegram connection mode: proxy")
+        logger.info("Telegram connection mode: configured proxy")
         session = AiohttpSession(proxy=proxy, timeout=90.0)
     else:
-        logger.info("Telegram connection mode: direct IPv4")
-        session = IPv4AiohttpSession(timeout=90.0)
+        logger.info("Telegram connection mode: dual-stack IPv4/IPv6")
+        session = DualStackAiohttpSession(timeout=90.0)
 
     logger.info("Telegram connection check. Token length: %s", len(token))
 
@@ -65,7 +72,7 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    await connect_telegram(bot, "proxy" if proxy else "direct IPv4")
+    await connect_telegram(bot, "proxy" if proxy else "dual-stack")
 
     dp = Dispatcher()
 
