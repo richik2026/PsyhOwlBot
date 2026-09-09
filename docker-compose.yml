@@ -6,10 +6,10 @@ services:
     restart: always
     command: python main.py
     environment:
-      DATABASE_URL: postgresql://sovenok:sovenok@postgres:5432/sovenok
-      ADMIN_ID: 8707664475
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_ID: ${ADMIN_ID}
       BOT_TOKEN: ${BOT_TOKEN}
-      TRIBUTE_SECRET: ${TRIBUTE_SECRET}
+      TRIBUTE_API_KEY: ${TRIBUTE_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "8000:8000"
@@ -23,10 +23,10 @@ services:
     restart: always
     command: python bot_runner.py
     environment:
-      DATABASE_URL: postgresql://sovenok:sovenok@postgres:5432/sovenok
-      ADMIN_ID: 8707664475
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_ID: ${ADMIN_ID}
       BOT_TOKEN: ${BOT_TOKEN}
-      TRIBUTE_SECRET: ${TRIBUTE_SECRET}
+      TRIBUTE_API_KEY: ${TRIBUTE_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - postgres
