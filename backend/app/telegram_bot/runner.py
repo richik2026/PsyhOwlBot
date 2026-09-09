@@ -1,12 +1,12 @@
 import asyncio
 
-from app.telegram_bot.bot import bot, start_bot
+from app.telegram_bot.bot import bot, dp, start_bot
 
 
 async def main():
     await start_bot()
     await bot.delete_webhook(drop_pending_updates=True)
-    await bot.start_polling(bot.dispatcher)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
