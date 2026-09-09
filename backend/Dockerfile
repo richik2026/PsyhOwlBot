@@ -2,12 +2,6 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Tor is used only as a local fallback SOCKS5 route for Telegram when the
-# hosting provider cannot reach api.telegram.org directly.
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends tor ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
 
 # Use Timeweb-friendly GitVerse PyPI mirror instead of files.pythonhosted.org.
