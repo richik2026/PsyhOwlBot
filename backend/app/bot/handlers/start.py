@@ -28,6 +28,6 @@ async def start_handler(message: Message, session: AsyncSession):
     await session.commit()
 
     await message.answer(
-        "Рад тебя видеть у Совёнка Криша 🦉\n\nО чём хочешь поговорить?",
+        "Рад тебя видеть у себя в гостях, о чём хочешь поговорить?",
         reply_markup=main_menu(),
     )
