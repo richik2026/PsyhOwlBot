@@ -22,10 +22,25 @@ class IPv4AiohttpSession(AiohttpSession):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # AiohttpSession builds its TCPConnector lazily from this config.
-        # Passing connector=... to AiohttpSession is invalid: that kwarg is
-        # forwarded to BaseSession and causes an "unexpected keyword" error.
         self._connector_init["family"] = socket.AF_INET
+
+
+async def connect_telegram(bot: Bot, mode: str):
+    """Keep trying Telegram connection when hosting provider drops outbound traffic."""
+    attempt = 0
+    while True:
+        try:
+            me = await bot.get_me()
+            logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
+            return
+        except Exception as e:
+            attempt += 1
+            logger.warning(
+                "Telegram connection attempt %s failed (%s). Retry in 10 seconds...",
+                attempt,
+                e,
+            )
+            await asyncio.sleep(10)
 
 
 async def main() -> None:
@@ -35,8 +50,6 @@ async def main() -> None:
 
     proxy = os.getenv("TELEGRAM_PROXY", "").strip() or None
 
-    # Variant 1: direct Telegram connection, forced to IPv4.
-    # Variant 2: if TELEGRAM_PROXY is configured in Timeweb, use that proxy.
     if proxy:
         logger.info("Telegram connection mode: proxy")
         session = AiohttpSession(proxy=proxy, timeout=90.0)
@@ -49,21 +62,10 @@ async def main() -> None:
     bot = Bot(
         token=token,
         session=session,
-        default=DefaultBotProperties(
-            parse_mode=ParseMode.HTML
-        )
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    try:
-        me = await bot.get_me()
-        logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
-    except Exception as e:
-        logger.exception(
-            "Telegram connection failed. mode=%s error=%s",
-            "proxy" if proxy else "direct IPv4",
-            e,
-        )
-        raise
+    await connect_telegram(bot, "proxy" if proxy else "direct IPv4")
 
     dp = Dispatcher()
 
@@ -76,10 +78,7 @@ async def main() -> None:
     scheduler_task = asyncio.create_task(daily_reports_loop(bot))
 
     try:
-        await dp.start_polling(
-            bot,
-            polling_timeout=60
-        )
+        await dp.start_polling(bot, polling_timeout=60)
     finally:
         scheduler_task.cancel()
         await bot.session.close()
