@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def check_telegram_network():
-    """Diagnostic check: verify DNS, TCP and HTTPS access to Telegram."""
+    """Diagnostic check: verify DNS access to Telegram."""
     try:
         addresses = await asyncio.to_thread(socket.getaddrinfo, "api.telegram.org", 443)
         logger.info("Telegram DNS resolved: %s addresses", len(addresses))
@@ -71,6 +71,16 @@ async def main() -> None:
     await connect_telegram(bot)
 
     dp = Dispatcher()
+
+    @dp.message()
+    async def debug_all_messages(message):
+        logger.info(
+            "INCOMING MESSAGE: user=%s text=%s",
+            message.from_user.id if message.from_user else None,
+            message.text,
+        )
+
+    logger.info("START POLLING")
 
     db_middleware = DatabaseMiddleware()
     dp.message.middleware(db_middleware)
