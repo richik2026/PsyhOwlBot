@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Use Timeweb-friendly GitVerse PyPI mirror instead of files.pythonhosted.org.
-# This avoids build hangs when direct PyPI downloads time out.
 ENV PIP_INDEX_URL=https://pypi-mirror.gitverse.ru/simple/
 ENV PIP_DEFAULT_TIMEOUT=300
 
@@ -14,4 +12,6 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-CMD ["python", "main.py"]
+RUN chmod +x start_bot.sh
+
+CMD ["sh", "start_bot.sh"]
