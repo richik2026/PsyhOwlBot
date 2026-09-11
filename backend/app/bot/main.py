@@ -3,8 +3,6 @@ import logging
 import os
 import socket
 
-import aiohttp
-
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -20,29 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 async def check_telegram_network():
-    """Diagnostic check: verify DNS access to Telegram."""
     try:
         addresses = await asyncio.to_thread(socket.getaddrinfo, "api.telegram.org", 443)
-        logger.info("Telegram DNS resolved: %s addresses", len(addresses))
+        logger.info("Telegram DNS OK: %s addresses", len(addresses))
     except Exception as e:
-        logger.error("Telegram network diagnostic failed: %s", e)
+        logger.warning("Telegram DNS check failed: %s", e)
 
 
-async def connect_telegram(bot: Bot):
-    attempt = 0
-    while True:
-        try:
-            me = await bot.get_me()
-            logger.info("Telegram connected successfully: @%s (id=%s)", me.username, me.id)
-            return
-        except Exception as e:
-            attempt += 1
-            logger.warning(
-                "Telegram connection attempt %s failed (%s). Retry in 10 seconds...",
-                attempt,
-                e,
-            )
-            await asyncio.sleep(10)
+async def check_telegram_connection(bot: Bot):
+    try:
+        me = await bot.get_me()
+        logger.info("Telegram API OK: @%s (%s)", me.username, me.id)
+        return True
+    except Exception as e:
+        logger.exception("Telegram API check failed: %s", e)
+        return False
 
 
 async def main() -> None:
@@ -53,10 +43,10 @@ async def main() -> None:
     proxy = os.getenv("TELEGRAM_PROXY")
 
     if proxy:
-        logger.info("Telegram API mode: SOCKS5 proxy enabled")
+        logger.info("Telegram session: proxy mode")
         session = AiohttpSession(proxy=proxy, timeout=90.0)
     else:
-        logger.info("Telegram API mode: direct aiogram session")
+        logger.info("Telegram session: direct mode")
         session = AiohttpSession(timeout=90.0)
 
     await check_telegram_network()
@@ -67,31 +57,32 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    logger.info("Telegram connection check. Token length: %s", len(token))
-    await connect_telegram(bot)
+    logger.info("BOT STARTING. Token length: %s", len(token))
+    await check_telegram_connection(bot)
 
     dp = Dispatcher()
 
     @dp.message()
     async def debug_all_messages(message):
         logger.info(
-            "INCOMING MESSAGE: user=%s text=%s",
+            "INCOMING MESSAGE user=%s text=%s",
             message.from_user.id if message.from_user else None,
             message.text,
         )
 
-    logger.info("START POLLING")
-
-    db_middleware = DatabaseMiddleware()
-    dp.message.middleware(db_middleware)
-    dp.callback_query.middleware(db_middleware)
+    dp.message.middleware(DatabaseMiddleware())
+    dp.callback_query.middleware(DatabaseMiddleware())
 
     dp.include_router(router)
 
     scheduler_task = asyncio.create_task(daily_reports_loop(bot))
 
     try:
+        logger.info("POLLING STARTED")
         await dp.start_polling(bot, polling_timeout=60)
+    except Exception:
+        logger.exception("Polling crashed")
+        raise
     finally:
         scheduler_task.cancel()
         await bot.session.close()
