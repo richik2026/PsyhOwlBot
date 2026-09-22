@@ -7,10 +7,42 @@ from app.referrals.service import get_or_create_admin_referral
 MAIN_ADMIN_TELEGRAM_ID = 8707664475
 VALID_ROLES = {"SUPER_ADMIN", "ADMIN", "SUPPORT", "CONTENT"}
 
+DEFAULT_ADMIN_USERNAMES = {
+    "bo0odyaa",
+    "twystedgeniusbaby",
+    "fib112358",
+    "NSW27",
+    "povarrrehka",
+    "Metalheadzzz",
+    "asakura_15",
+}
+
 
 async def get_admin_by_telegram_id(session: AsyncSession, telegram_id: int) -> Admin | None:
     result = await session.execute(select(Admin).where(Admin.telegram_id == telegram_id))
     return result.scalar_one_or_none()
+
+
+async def ensure_whitelist_admin(
+    session: AsyncSession, *, telegram_id: int, username: str | None
+) -> Admin | None:
+    if not username or username.lower() not in {item.lower() for item in DEFAULT_ADMIN_USERNAMES}:
+        return await get_admin_by_telegram_id(session, telegram_id)
+
+    admin = await get_admin_by_telegram_id(session, telegram_id)
+    if admin is None:
+        admin = Admin(
+            telegram_id=telegram_id,
+            role="ADMIN",
+            is_active=True,
+        )
+        session.add(admin)
+    else:
+        admin.role = "ADMIN"
+        admin.is_active = True
+
+    await session.flush()
+    return admin
 
 
 async def ensure_main_admin(session: AsyncSession) -> Admin:
@@ -30,13 +62,7 @@ async def ensure_main_admin(session: AsyncSession) -> Admin:
     return admin
 
 
-async def appoint_admin(
-    session: AsyncSession,
-    *,
-    actor_telegram_id: int,
-    target_telegram_id: int,
-    role: str = "ADMIN",
-) -> Admin:
+async def appoint_admin(session: AsyncSession, *, actor_telegram_id: int, target_telegram_id: int, role: str = "ADMIN") -> Admin:
     if actor_telegram_id != MAIN_ADMIN_TELEGRAM_ID:
         raise PermissionError("Only the main admin can appoint administrators")
 
@@ -46,11 +72,7 @@ async def appoint_admin(
 
     admin = await get_admin_by_telegram_id(session, target_telegram_id)
     if admin is None:
-        admin = Admin(
-            telegram_id=target_telegram_id,
-            role=normalized_role,
-            is_active=True,
-        )
+        admin = Admin(telegram_id=target_telegram_id, role=normalized_role, is_active=True)
         session.add(admin)
     else:
         admin.role = normalized_role
@@ -61,12 +83,7 @@ async def appoint_admin(
     return admin
 
 
-async def deactivate_admin(
-    session: AsyncSession,
-    *,
-    actor_telegram_id: int,
-    target_telegram_id: int,
-) -> Admin:
+async def deactivate_admin(session: AsyncSession, *, actor_telegram_id: int, target_telegram_id: int) -> Admin:
     if actor_telegram_id != MAIN_ADMIN_TELEGRAM_ID:
         raise PermissionError("Only the main admin can deactivate administrators")
     if target_telegram_id == MAIN_ADMIN_TELEGRAM_ID:
