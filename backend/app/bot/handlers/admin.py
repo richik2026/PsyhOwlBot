@@ -37,7 +37,8 @@ async def admin_command(message: Message, session: AsyncSession):
 
         await message.bot.send_message(
             target_id,
-            "Добро пожаловать в семью🦉\n\n"
+            "Поздравляю, ты стал частью семьи!\n"
+            "Welcome to the Sovenok Imperia🦉\n\n"
             f"Твоя персональная ссылка:\n\n{link}\n\n"
             "Все пользователи, которые придут по ней и оформят подписку, "
             "будут учитываться в твоей статистике 📈",
