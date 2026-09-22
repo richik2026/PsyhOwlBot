@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,4 +20,11 @@ async def get_reels_rating(session: AsyncSession, start_date: datetime):
     )
 
     rows = result.all()
-    return [{"name": str(row.telegram_id), "reels": row.reels} for row in rows]
+    return [
+        {
+            "name": f"Admin {row.telegram_id}",
+            "telegram_id": row.telegram_id,
+            "reels": row.reels,
+        }
+        for row in rows
+    ]
