@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from app.database.session import AsyncSessionLocal
 from app.scheduler.reports import send_daily_reels_report, send_daily_sales_report
 
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
@@ -15,8 +16,10 @@ async def daily_reports_loop(bot):
         now = datetime.now(MOSCOW_TZ)
 
         if now.hour == 23 and now.minute == 59 and sent_date != now.date():
-            await send_daily_sales_report(bot)
-            await send_daily_reels_report(bot)
+            async with AsyncSessionLocal() as session:
+                await send_daily_sales_report(bot, session)
+                await send_daily_reels_report(bot, session)
+
             sent_date = now.date()
 
         await asyncio.sleep(30)
