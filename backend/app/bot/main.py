@@ -42,12 +42,7 @@ async def main() -> None:
 
     proxy = os.getenv("TELEGRAM_PROXY")
 
-    if proxy:
-        logger.info("Telegram session: proxy mode")
-        session = AiohttpSession(proxy=proxy, timeout=90.0)
-    else:
-        logger.info("Telegram session: direct mode")
-        session = AiohttpSession(timeout=90.0)
+    session = AiohttpSession(proxy=proxy, timeout=90.0) if proxy else AiohttpSession(timeout=90.0)
 
     await check_telegram_network()
 
@@ -61,14 +56,6 @@ async def main() -> None:
     await check_telegram_connection(bot)
 
     dp = Dispatcher()
-
-    @dp.message()
-    async def debug_all_messages(message):
-        logger.info(
-            "INCOMING MESSAGE user=%s text=%s",
-            message.from_user.id if message.from_user else None,
-            message.text,
-        )
 
     dp.message.middleware(DatabaseMiddleware())
     dp.callback_query.middleware(DatabaseMiddleware())
