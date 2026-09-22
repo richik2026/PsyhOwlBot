@@ -1,0 +1,43 @@
+name: Deploy to Timeweb
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: timeweb-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.TIMEWEB_HOST }}
+          SSH_USER: ${{ secrets.TIMEWEB_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.TIMEWEB_SSH_KEY }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/timeweb_key
+          chmod 600 ~/.ssh/timeweb_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/timeweb_key "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /opt/PsyhOwlBot
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          docker build -t sovenok:latest .
+
+          docker rm -f sovenok 2>/dev/null || true
+
+          docker run -d             --name sovenok             --restart unless-stopped             --env-file .env             sovenok:latest
+
+          docker image prune -f
+          REMOTE
