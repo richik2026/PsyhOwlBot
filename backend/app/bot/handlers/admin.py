@@ -10,6 +10,27 @@ from app.referrals.service import build_referral_url, get_or_create_admin_referr
 router = Router()
 
 
+async def _send_admin_panel(message: Message, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, message.from_user.id)
+
+    if admin is None or not admin.is_active:
+        await message.answer("Эта команда доступна только администраторам")
+        return
+
+    data = await get_admin_dashboard(session, admin)
+    await message.answer(format_admin_dashboard(data), parse_mode="HTML")
+
+
+@router.message(Command("admin_panel"))
+async def admin_panel(message: Message, session: AsyncSession):
+    await _send_admin_panel(message, session)
+
+
+@router.message(Command("my_stats"))
+async def my_stats(message: Message, session: AsyncSession):
+    await _send_admin_panel(message, session)
+
+
 @router.message(Command("admin"))
 async def admin_command(message: Message, session: AsyncSession):
     parts = message.text.split()
@@ -51,15 +72,3 @@ async def admin_command(message: Message, session: AsyncSession):
         await message.answer("Недостаточно прав")
     except Exception as exc:
         await message.answer(f"Ошибка назначения администратора: {exc}")
-
-
-@router.message(Command("my_stats"))
-async def my_stats(message: Message, session: AsyncSession):
-    admin = await get_admin_by_telegram_id(session, message.from_user.id)
-
-    if admin is None or not admin.is_active:
-        await message.answer("Эта команда доступна только администраторам")
-        return
-
-    data = await get_admin_dashboard(session, admin)
-    await message.answer(format_admin_dashboard(data))
