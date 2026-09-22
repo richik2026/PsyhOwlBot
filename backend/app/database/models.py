@@ -7,6 +7,7 @@ from app.settings.models import Setting
 from app.reels.models import AdminReels
 from app.sales.models import Sale
 from app.subscriptions.models import Subscription
+from app.support.models import SupportMessage
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "AdminReels",
     "Sale",
     "Subscription",
+    "SupportMessage",
 ]
