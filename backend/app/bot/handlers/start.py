@@ -2,20 +2,20 @@ from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.admins.models import Admin
 from app.admins.service import ensure_whitelist_admin
 from app.bot.keyboards.main import main_menu
 from app.referrals.service import resolve_referrer_admin_id
 from app.subscriptions.models import Subscription
 from app.subscriptions.service import has_active_access, remaining_seconds
-from app.users.models import User
 from app.users.service import get_or_create_user
 
 router = Router()
+
+WELCOME_IMAGE = "backend/app/bot/assets/Sovenok_Psiholog_Welcome_640x360.png"
 
 
 async def get_subscription(session: AsyncSession, user_id: int):
@@ -29,12 +29,7 @@ async def start_handler(message: Message, session: AsyncSession):
     start_parameter = args[1] if len(args) > 1 else None
 
     referrer_admin_id = await resolve_referrer_admin_id(session, start_parameter)
-
-    admin = await ensure_whitelist_admin(
-        session,
-        telegram_id=message.from_user.id,
-        username=message.from_user.username,
-    )
+    admin = await ensure_whitelist_admin(session, telegram_id=message.from_user.id, username=message.from_user.username)
 
     user, _ = await get_or_create_user(
         session,
@@ -45,42 +40,22 @@ async def start_handler(message: Message, session: AsyncSession):
     )
 
     subscription = await get_subscription(session, user.id)
-    is_admin = bool(admin and admin.role in {"ADMIN", "SUPER_ADMIN"} and admin.is_active)
-
+    is_admin = bool(admin and admin.is_active and admin.role in {"ADMIN", "SUPER_ADMIN"})
     await session.commit()
 
     name = message.from_user.first_name or message.from_user.username or "друг"
 
     if is_admin:
-        text = (
-            f"Добро пожаловать, {name}!🦉\n\n"
-            "Меня зовут Криш, и я очень рад приветствовать тебя🫂\n\n"
-            "На данный момент твоя подписка: Активна✅\n\n"
-            "Тебе доступно ещё: 2222 часов разговоров со мной⌛️\n\n"
-            "Подписка закончится через: Никогда. 🗓"
-        )
+        text = f"Добро пожаловать, {name}!🦉\n\nМеня зовут Криш, и я очень рад приветствовать тебя🫂\n\nНа данный момент твоя подписка: Активна✅\n\nТебе доступно ещё: 2222 часов разговоров со мной⌛️\n\nПодписка закончится через: Никогда. 🗓"
     elif has_active_access(subscription):
         days = max(0, (subscription.active_until - datetime.utcnow()).days)
         hours = remaining_seconds(subscription) // 3600
-        text = (
-            f"Добро пожаловать, {name}!🦉\n\n"
-            "Меня зовут Криш, и я очень рад приветствовать тебя🫂\n\n"
-            "На данный момент твоя подписка: Активна✅\n\n"
-            f"Тебе доступно ещё: {hours} часов разговоров со мной⌛️\n\n"
-            f"Подписка закончится через: {days} дней. 🗓"
-        )
+        text = f"Добро пожаловать, {name}!🦉\n\nМеня зовут Криш, и я очень рад приветствовать тебя🫂\n\nНа данный момент твоя подписка: Активна✅\n\nТебе доступно ещё: {hours} часов разговоров со мной⌛️\n\nПодписка закончится через: {days} дней. 🗓"
     else:
-        text = (
-            f"Добро пожаловать, {name}!🦉\n\n"
-            "🫂 Меня зовут Криш\n\n"
-            "👩‍🏫 Я — современный инновационный психологический друг,\n"
-            "обученный на материалах лучших мировых университетов📚\n\n"
-            "📈Мы сэкономили деньги на психологах более чем 100 людям,\n"
-            "а возможно даже дали гораздо лучший эффект☝️\n\n"
-            "Для того, чтобы воспользоваться моими услугами, необходимо активировать подписку"
-        )
+        text = "Добро пожаловать, %s!🦉\n\n🫂 Меня зовут Криш\n\n👩‍🏫 Я — современный инновационный психологический друг,\nобученный на материалах лучших мировых университетов📚\n\n📈Мы сэкономили деньги на психологах более чем 100 людям,\nа возможно даже дали гораздо лучший эффект☝️\n\nДля того, чтобы воспользоваться моими услугами, необходимо активировать подписку" % name
 
-    await message.answer(
-        text,
+    await message.answer_photo(
+        FSInputFile(WELCOME_IMAGE),
+        caption=text,
         reply_markup=main_menu(is_admin=is_admin, has_subscription=is_admin or has_active_access(subscription)),
     )
