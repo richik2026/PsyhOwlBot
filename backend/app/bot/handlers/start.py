@@ -15,7 +15,7 @@ from app.users.service import get_or_create_user
 
 router = Router()
 
-WELCOME_IMAGE = "backend/app/bot/assets/Sovenok_Psiholog_Welcome_640x360.png"
+WELCOME_IMAGE = "backend/app/bot/assets/Sovenok_Psiholog_Welcome_1280x720.jpg"
 
 
 async def get_subscription(session: AsyncSession, user_id: int):
