@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,12 +33,25 @@ async def get_admin_dashboard(session: AsyncSession, admin: Admin) -> dict:
         )
     )
 
+    ranking_result = await session.execute(
+        select(
+            Admin.id,
+            func.count(Sale.id).label("sales_count")
+        )
+        .join(Sale, Admin.id == Sale.admin_id)
+        .group_by(Admin.id)
+        .order_by(func.count(Sale.id).desc())
+    )
+
+    ranking = [row.id for row in ranking_result.all()]
+    rating_place = ranking.index(admin.id) + 1 if admin.id in ranking else "—"
+
     return {
         "role": admin.role,
         "users_count": users_count,
         "subscriptions_count": subscriptions_count,
         "revenue": revenue,
-        "rating_place": "—",
+        "rating_place": rating_place,
         "reels_count": reels_result.scalar_one(),
     }
 
