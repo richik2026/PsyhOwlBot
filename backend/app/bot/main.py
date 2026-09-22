@@ -3,8 +3,6 @@ import logging
 import os
 import socket
 
-import aiohttp
-
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -17,20 +15,6 @@ from app.scheduler.service import daily_reports_loop
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-class IPv6Resolver(aiohttp.AsyncResolver):
-    async def resolve(
-        self,
-        host,
-        port=0,
-        family=socket.AF_INET6
-    ):
-        return await super().resolve(
-            host,
-            port,
-            family=socket.AF_INET6
-        )
 
 
 async def check_telegram_network():
@@ -92,25 +76,6 @@ async def main() -> None:
     proxy = os.getenv("TELEGRAM_PROXY")
 
 
-    await check_telegram_network()
-
-
-    # Используем IPv6 для Telegram API
-    resolver = IPv6Resolver()
-
-    connector = aiohttp.TCPConnector(
-        resolver=resolver,
-        family=socket.AF_INET6,
-        ttl_dns_cache=300
-    )
-
-
-    # ВАЖНО:
-    # AiohttpSession aiogram не принимает connector напрямую,
-    # поэтому создаём обычную сессию без proxy-коннектора.
-    # IPv6 будет использоваться через системный приоритет.
-
-
     if proxy:
         logger.info(
             "Telegram proxy enabled"
@@ -122,10 +87,12 @@ async def main() -> None:
         )
 
     else:
-
         session = AiohttpSession(
             timeout=90.0
         )
+
+
+    await check_telegram_network()
 
 
     bot = Bot(
@@ -143,8 +110,13 @@ async def main() -> None:
     )
 
 
-    # Не блокируем запуск бота из-за временного Telegram timeout
-    await check_telegram_connection(bot)
+    # Проверяем Telegram, но не ломаем запуск при временном таймауте
+    try:
+        await check_telegram_connection(bot)
+    except Exception:
+        logger.warning(
+            "Telegram check failed, continuing startup"
+        )
 
 
     dp = Dispatcher()
@@ -182,12 +154,10 @@ async def main() -> None:
         logger.exception(
             "Polling crashed"
         )
-
         raise
 
 
     finally:
-
         scheduler_task.cancel()
 
         try:
@@ -198,7 +168,6 @@ async def main() -> None:
 
 
         await bot.session.close()
-
 
 
 if __name__ == "__main__":
