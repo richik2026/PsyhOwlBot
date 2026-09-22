@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from app.bot.handlers import start, admin, reels, dashboard, ratings, subscription, conversation
+from app.bot.handlers import start, admin, reels, dashboard, ratings, subscription, conversation, support
 
 
 router = Router()
@@ -12,3 +12,4 @@ router.include_router(dashboard.router)
 router.include_router(ratings.router)
 router.include_router(subscription.router)
 router.include_router(conversation.router)
+router.include_router(support.router)
