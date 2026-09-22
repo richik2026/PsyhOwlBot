@@ -21,14 +21,18 @@ async def get_admin_dashboard(session: AsyncSession, admin: Admin) -> dict:
     return {
         "role": admin.role,
         "users_count": users_count,
+        "subscriptions_count": 0,
+        "rating_place": "—",
         "reels_count": reels_result.scalar_one(),
     }
 
 
 def format_admin_dashboard(data: dict) -> str:
     return (
-        "🦉 <b>Твоя статистика</b>\n\n"
+        "🦉 <b>Админ-Панель</b>\n\n"
         f"👤 Должность: {data['role']}\n\n"
         f"👥 Привлечено пользователей: {data['users_count']}\n\n"
-        f"🎬 Reels: {data['reels_count']}"
+        f"💳 Куплено подписок: {data['subscriptions_count']}\n\n"
+        f"🏆 Место в рейтинге: {data['rating_place']}\n\n"
+        f"🎬 Опубликовано Reels: {data['reels_count']}"
     )
