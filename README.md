@@ -5,3 +5,4 @@ AI голосовой психолог внутри Telegram.
 Проект находится в стадии разработки.
 # deploy test
 # ssh fix
+# deploy fixed
