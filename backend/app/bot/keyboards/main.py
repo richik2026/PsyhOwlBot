@@ -1,30 +1,29 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+SUBSCRIPTION_URL = "https://t.me/tribute/app?startapp=s12Ac"
 
 
-def main_menu(is_admin: bool = False, has_subscription: bool = False) -> ReplyKeyboardMarkup:
+def main_menu(is_admin: bool = False, has_subscription: bool = False) -> InlineKeyboardMarkup:
     if not has_subscription and not is_admin:
         buttons = [
-            [KeyboardButton(text="🏆 Купить подписку")],
-            [KeyboardButton(text="💬 Чат с поддержкой")],
-            [KeyboardButton(text="📕 Почему я круче людей психологов?")],
+            [InlineKeyboardButton(text="🏆 Купить подписку", url=SUBSCRIPTION_URL)],
+            [InlineKeyboardButton(text="💬 Чат с поддержкой", callback_data="support")],
+            [InlineKeyboardButton(text="📕 Почему я круче психологов", callback_data="about_psychologists")],
         ]
     elif is_admin:
         buttons = [
-            [KeyboardButton(text="🦉 Поговорить с Совёнком")],
-            [KeyboardButton(text="💬 Чат с поддержкой")],
-            [KeyboardButton(text="💳 Продлить подписку")],
-            [KeyboardButton(text="📕 Подробнее о нас")],
-            [KeyboardButton(text="👑 Админ-панель")],
+            [InlineKeyboardButton(text="🦉 Поговорить с Совёнком", callback_data="talk")],
+            [InlineKeyboardButton(text="💬 Чат с поддержкой", callback_data="support")],
+            [InlineKeyboardButton(text="💳 Продлить подписку", url=SUBSCRIPTION_URL)],
+            [InlineKeyboardButton(text="📕 Подробнее о нас", callback_data="about_project")],
+            [InlineKeyboardButton(text="👑 Админ-панель", callback_data="admin_panel")],
         ]
     else:
         buttons = [
-            [KeyboardButton(text="🦉 Поговорить с Совёнком")],
-            [KeyboardButton(text="💬 Чат с поддержкой")],
-            [KeyboardButton(text="💳 Продлить подписку")],
-            [KeyboardButton(text="📕 Подробнее о нас")],
+            [InlineKeyboardButton(text="🦉 Поговорить с Совёнком", callback_data="talk")],
+            [InlineKeyboardButton(text="💬 Чат с поддержкой", callback_data="support")],
+            [InlineKeyboardButton(text="💳 Продлить подписку", url=SUBSCRIPTION_URL)],
+            [InlineKeyboardButton(text="📕 Подробнее о нас", callback_data="about_project")],
         ]
 
-    return ReplyKeyboardMarkup(
-        keyboard=buttons,
-        resize_keyboard=True,
-    )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
