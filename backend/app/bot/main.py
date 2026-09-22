@@ -3,8 +3,6 @@ import logging
 import os
 import socket
 
-import aiohttp
-
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -78,24 +76,19 @@ async def main() -> None:
     proxy = os.getenv("TELEGRAM_PROXY")
 
 
-    # Принудительно используем IPv6,
-    # так как IPv4 маршрут до Telegram на сервере таймаутится
-    connector = aiohttp.TCPConnector(
-        family=socket.AF_INET6,
-        ttl_dns_cache=300
-    )
-
-
     if proxy:
+        logger.info(
+            "Telegram proxy enabled"
+        )
+
         session = AiohttpSession(
             proxy=proxy,
-            timeout=90.0,
-            connector=connector
+            timeout=90.0
         )
+
     else:
         session = AiohttpSession(
-            timeout=90.0,
-            connector=connector
+            timeout=90.0
         )
 
 
@@ -117,12 +110,7 @@ async def main() -> None:
     )
 
 
-    connected = await check_telegram_connection(bot)
-
-    if not connected:
-        logger.warning(
-            "Telegram connection failed, starting polling anyway"
-        )
+    await check_telegram_connection(bot)
 
 
     dp = Dispatcher()
@@ -170,6 +158,7 @@ async def main() -> None:
 
         try:
             await scheduler_task
+
         except asyncio.CancelledError:
             pass
 
