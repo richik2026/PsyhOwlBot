@@ -41,6 +41,12 @@ async def support_handler(message: Message, state: FSMContext):
     await send_support_prompt(message, state)
 
 
+@router.callback_query(F.data == "support")
+async def support_callback(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await send_support_prompt(callback.message, state)
+
+
 @router.message(SupportStates.waiting_message, F.text)
 async def support_relay(message: Message, state: FSMContext, session: AsyncSession):
     sent = await message.bot.send_message(
