@@ -30,13 +30,13 @@ def back_menu_keyboard():
 async def send_support_prompt(message: Message, state: FSMContext):
     await state.set_state(SupportStates.waiting_message)
     await message.answer(
-        "📨 <b>Техническая поддержка Совёнка</b>\n\n"
-        "Напиши свой вопрос одним сообщением.",
+        "🦉 <b>Техническая поддержка Совёнка</b>\n\n"
+        "📪 Отправьте обращение сюда и наша команда рассмотрит его в ближайшее время!",
         parse_mode="HTML"
     )
 
 
-@router.message(F.text == "🆘 Техподдержка")
+@router.message(F.text == "⚒ Техподдержка")
 async def support_handler(message: Message, state: FSMContext):
     await send_support_prompt(message, state)
 
@@ -51,8 +51,8 @@ async def support_callback(callback: CallbackQuery, state: FSMContext):
 async def support_relay(message: Message, state: FSMContext, session: AsyncSession):
     sent = await message.bot.send_message(
         SUPPORT_GROUP_ID,
-        "❗️ <b>НОВОЕ ОБРАЩЕНИЕ</b>\n\n"
-        f"👤 Пользователь: @{escape(message.from_user.username or str(message.from_user.id))}\n\n"
+        "🤍 <b>НОВОЕ ОБРАЩЕНИЕ</b>\n\n"
+        f"🦉 Пользователь: @{escape(message.from_user.username or str(message.from_user.id))}\n\n"
         f"💬 Сообщение:\n{escape(message.text)}",
         parse_mode="HTML"
     )
@@ -68,7 +68,7 @@ async def support_relay(message: Message, state: FSMContext, session: AsyncSessi
     await state.clear()
 
     await message.answer(
-        "✅ Благодарим за обращение, на него ответят в ближайшее время.",
+        "🤍 Благодарим вас за обращение! Наша команда ответит вам в ближайшее время.",
         reply_markup=back_menu_keyboard()
     )
 
@@ -89,7 +89,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         return
 
     if ticket.admin_id:
-        await callback.answer("⚠️ Это обращение уже взял в обработку админ", show_alert=True)
+        await callback.answer("🤍 Это обращение уже взял в обработку админ", show_alert=True)
         return
 
     ticket.admin_id = callback.from_user.id
@@ -98,7 +98,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
 
     username = callback.from_user.username or str(callback.from_user.id)
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n✅ <b>Взято в работу</b>\nАдминистратор: @" + escape(username),
+        callback.message.html_text + "\n\n🤍 <b>Взято в работу</b>администратором: @" + escape(username),
         parse_mode="HTML",
         reply_markup=None
     )
