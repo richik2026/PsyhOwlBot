@@ -111,7 +111,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         )
         return
 
-    request.admin_id = admin.id
+    request.admin_id = callback.from_user.id
     await session.commit()
 
     username = callback.from_user.username or str(callback.from_user.id)
