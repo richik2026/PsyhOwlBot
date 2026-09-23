@@ -21,12 +21,12 @@ async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
 
     if not admin or not admin.is_active or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
-        await callback.message.answer("Эта команда доступна только администраторам")
-        await callback.answer()
+        await callback.answer("Эта команда доступна только администраторам", show_alert=True)
         return
 
     data = await get_admin_dashboard(session, admin)
-    await callback.message.answer(
+
+    await callback.message.edit_text(
         format_admin_dashboard(data),
         parse_mode="HTML",
         reply_markup=admin_menu(),
