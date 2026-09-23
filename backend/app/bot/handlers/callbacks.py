@@ -42,10 +42,15 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
     request.admin_id = callback.from_user.id
     await session.commit()
 
-    await callback.message.answer(
-        f"👤 <i>Взято в обработку админом @{callback.from_user.username}</i>",
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.edit_text(
+        callback.message.html_text
+        + "\n\n👤 <i>Взято в обработку админом @"
+        + (callback.from_user.username or str(callback.from_user.id))
+        + "</i>",
         parse_mode="HTML",
     )
+
     await callback.answer()
 
 
