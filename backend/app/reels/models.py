@@ -17,5 +17,3 @@ class AdminReels(Base):
     )
     number_of_reels: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
