@@ -56,14 +56,30 @@ async def support_relay(message: Message, state: FSMContext, session: AsyncSessi
         f"💬 <b>Сообщение:</b>\n{escape(message.text)}"
     )
 
-    sent = await message.bot.send_message(SUPPORT_GROUP_ID, text, parse_mode="HTML", reply_markup=support_claim_keyboard(0))
-    await message.bot.edit_message_reply_markup(SUPPORT_GROUP_ID, sent.message_id, reply_markup=support_claim_keyboard(sent.message_id))
+    sent = await message.bot.send_message(
+        SUPPORT_GROUP_ID,
+        text,
+        parse_mode="HTML"
+    )
+    await message.bot.edit_message_reply_markup(
+        SUPPORT_GROUP_ID,
+        sent.message_id,
+        reply_markup=support_claim_keyboard(sent.message_id)
+    )
 
-    session.add(SupportMessage(user_id=message.from_user.id, support_message_id=sent.message_id))
+    session.add(
+        SupportMessage(
+            user_id=message.from_user.id,
+            support_message_id=sent.message_id
+        )
+    )
     await session.commit()
     await state.clear()
 
-    await message.answer("❤️ Благодарим за обращение! ❤️", reply_markup=back_menu_keyboard())
+    await message.answer(
+        "❤️ Благодарим за обращение! ❤️",
+        reply_markup=back_menu_keyboard()
+    )
 
 
 @router.callback_query(F.data.startswith("support_claim:"))
@@ -73,8 +89,13 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         await callback.answer("Недостаточно прав", show_alert=True)
         return
 
-    message_id = int(callback.data.split(":")[1])
-    result = await session.execute(select(SupportMessage).where(SupportMessage.support_message_id == message_id))
+    message_id = int(callback.data.split(":", 1)[1])
+
+    result = await session.execute(
+        select(SupportMessage).where(
+            SupportMessage.support_message_id == message_id
+        )
+    )
     request = result.scalar_one_or_none()
 
     if request is None:
@@ -82,17 +103,23 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         return
 
     if request.admin_id:
-        current = await session.execute(select(SupportMessage).where(SupportMessage.id == request.id))
-        existing = current.scalar_one()
-        await callback.answer("Это обращение уже в обработке администратором", show_alert=True)
+        existing_admin = await get_admin_by_telegram_id(session, request.admin_id)
+        username = existing_admin.username if existing_admin and existing_admin.username else str(request.admin_id)
+        await callback.answer(
+            f"Это обращение уже в обработке администратором @{username}",
+            show_alert=True
+        )
         return
 
     request.admin_id = admin.id
     await session.commit()
 
+    username = callback.from_user.username or str(callback.from_user.id)
+
     await callback.message.edit_text(
-        callback.message.html_text + f"\n\n👤 <b>Взято в обработку админом @{escape(callback.from_user.username or str(callback.from_user.id))}</b>",
-        parse_mode="HTML"
+        callback.message.html_text + f"\n\n👤 <b>Взято в обработку админом @{escape(username)}</b>",
+        parse_mode="HTML",
+        reply_markup=None
     )
     await callback.answer()
 
@@ -101,8 +128,19 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
 async def support_reply_handler(message: Message, session: AsyncSession):
     if message.chat.id != SUPPORT_GROUP_ID:
         return
-    result = await session.execute(select(SupportMessage).where(SupportMessage.support_message_id == message.reply_to_message.message_id))
+
+    result = await session.execute(
+        select(SupportMessage).where(
+            SupportMessage.support_message_id == message.reply_to_message.message_id
+        )
+    )
     support_request = result.scalar_one_or_none()
+
     if support_request is None:
         return
-    await message.bot.send_message(support_request.user_id, f"🦉 <b>Ответ поддержки:</b>\n\n{escape(message.text or '')}", parse_mode="HTML")
+
+    await message.bot.send_message(
+        support_request.user_id,
+        f"🦉 <b>Ответ поддержки:</b>\n\n{escape(message.text or '')}",
+        parse_mode="HTML"
+    )
