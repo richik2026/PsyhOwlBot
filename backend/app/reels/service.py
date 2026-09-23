@@ -3,6 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.admins.models import Admin
 from app.reels.models import AdminReels
 
 
@@ -51,10 +52,11 @@ async def get_reels_rating_today(session: AsyncSession, limit: int = 10):
 async def get_reels_total_rating(session: AsyncSession, limit: int = 10):
     result = await session.execute(
         select(
-            AdminReels.admin_id,
+            Admin.telegram_id,
             func.sum(AdminReels.number_of_reels).label("total")
         )
-        .group_by(AdminReels.admin_id)
+        .join(AdminReels, AdminReels.admin_id == Admin.id)
+        .group_by(Admin.telegram_id)
         .order_by(desc("total"))
         .limit(limit)
     )
@@ -63,7 +65,13 @@ async def get_reels_total_rating(session: AsyncSession, limit: int = 10):
 
 async def format_reels_total_rating(session: AsyncSession):
     items = await get_reels_total_rating(session)
+    username_by_id = {
+        8707664475: "bo0odyaa",
+    }
+
     lines = ["📊 Топ Reels за всё время:"]
     for index, item in enumerate(items, 1):
-        lines.append(f"{index}. Admin {item.admin_id} — {item.total}")
+        username = username_by_id.get(item.telegram_id, f"ID {item.telegram_id}")
+        lines.append(f"{index}. @{username} — {item.total}")
+
     return "\n".join(lines)
