@@ -10,13 +10,9 @@ from app.reels.service import add_reels, get_reels_rating_today
 router = Router()
 
 
-@router.message(lambda message: message.text in {"➕ Рилс", "+ Рилс"})
-async def add_reels_handler(message: Message, state: FSMContext):
-    await state.set_state(ReelsStates.waiting_for_amount)
-    await message.answer(
-        "📒 <b>Напиши количество рилсов которое ты опубликовал за сегодня</b>",
-        parse_mode="HTML",
-    )
+async def is_admin(session: AsyncSession, telegram_id: int):
+    admin = await get_admin_by_telegram_id(session, telegram_id)
+    return admin and admin.is_active and admin.role in {"ADMIN", "SUPER_ADMIN"}
 
 
 @router.message(ReelsStates.waiting_for_amount)
@@ -26,28 +22,19 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
         return
 
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
-    if admin is None or not admin.is_active:
+    if not admin or not admin.is_active or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
         await state.clear()
-        await message.answer("Добавлять статистику могут только администраторы")
         return
 
-    amount = int(message.text)
-    await add_reels(session, admin.id, amount)
+    await add_reels(session, admin.id, int(message.text))
     await session.commit()
 
     rating = await get_reels_rating_today(session)
-    place = None
-    for index, item in enumerate(rating, start=1):
-        if item.admin_id == admin.id:
-            place = index
-            break
+    place = next((i for i, item in enumerate(rating, 1) if item.admin_id == admin.id), None)
 
     await state.clear()
-
-    place_text = str(place) if place else "—"
-
     await message.answer(
         "👍 <b>Спасибо за работу, коллега!</b>\n\n"
-        f"⚡ Теперь вы в топе <b>{place_text} место</b>",
+        f"⚡ Теперь вы в топе <b>{place or '-'} место</b>",
         parse_mode="HTML",
     )
