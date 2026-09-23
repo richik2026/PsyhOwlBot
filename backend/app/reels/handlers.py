@@ -1,11 +1,12 @@
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.service import get_admin_by_telegram_id
 from app.bot.states.reels import ReelsStates
-from app.reels.service import add_reels, get_reels_rating_today
+from app.reels.service import add_reels, get_reels_rating_today, format_reels_total_rating
 
 router = Router()
 
@@ -22,14 +23,14 @@ async def add_reels_start(callback: CallbackQuery, state: FSMContext, session: A
         return
 
     await state.set_state(ReelsStates.waiting_for_amount)
-    await callback.message.answer("📒 Напиши количество рилсов которое ты опубликовал за сегодня")
+    await callback.message.answer("Введите количество рилсов, которое вы хотите добавить:")
     await callback.answer()
 
 
 @router.message(ReelsStates.waiting_for_amount)
 async def save_reels_amount(message: Message, state: FSMContext, session: AsyncSession):
     if not message.text or not message.text.isdigit():
-        await message.answer("❗️УКАЖИТЕ ЦИФРУ!")
+        await message.answer("Введите число рилсов цифрами")
         return
 
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
@@ -40,11 +41,13 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
     await add_reels(session, admin.id, int(message.text))
     await session.commit()
 
-    rating = await get_reels_rating_today(session)
-    place = next((i for i, item in enumerate(rating, 1) if item.admin_id == admin.id), 0)
-    place_text = str(place) if place else "первое"
-
     await state.clear()
-    await message.answer(
-        f"👍 Спасибо за работу, коллега!\n\n⚡ Теперь вы в топе {place_text} место"
-    )
+    await message.answer(f"✅ Добавлено Reels: {message.text}")
+
+
+@router.message(Command("topreels"))
+async def top_reels(message: Message, session: AsyncSession):
+    if not await check_admin(session, message.from_user.id):
+        return
+
+    await message.answer(await format_reels_total_rating(session))
