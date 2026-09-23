@@ -5,31 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.handlers.admin import open_admin_panel
 from app.bot.states.reels import ReelsStates
-from app.admins.service import get_admin_by_telegram_id, ensure_whitelist_admin
+from app.admins.service import get_admin_by_telegram_id
 
 router = Router()
 
 
 async def is_admin(session: AsyncSession, telegram_id: int, username: str | None = None):
     admin = await get_admin_by_telegram_id(session, telegram_id)
-    if admin is None and username:
-        admin = await ensure_whitelist_admin(
-            session,
-            telegram_id=telegram_id,
-            username=username,
-        )
     return admin and admin.is_active
 
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
-    await ensure_whitelist_admin(
-        session,
-        telegram_id=callback.from_user.id,
-        username=callback.from_user.username,
-    )
-    await session.commit()
-
     await open_admin_panel(
         session,
         callback.from_user.id,
