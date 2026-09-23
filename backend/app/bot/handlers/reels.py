@@ -44,7 +44,7 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
 
     await state.clear()
 
-    place_text = str(place) if place else "пока не определено"
+    place_text = str(place) if place else "—"
 
     await message.answer(
         "👍 <b>Спасибо за работу, коллега!</b>\n\n"
