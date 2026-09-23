@@ -1,5 +1,5 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import Router
+from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import get_admin_dashboard, format_admin_dashboard
@@ -26,9 +26,3 @@ async def show_admin_panel(target, session: AsyncSession):
 @router.message(lambda message: message.text == "📊 Админ-Панель")
 async def admin_dashboard(message: Message, session: AsyncSession):
     await show_admin_panel(message, session)
-
-
-@router.callback_query(F.data == "admin_panel")
-async def admin_dashboard_callback(callback: CallbackQuery, session: AsyncSession):
-    await show_admin_panel(callback.message, session)
-    await callback.answer()
