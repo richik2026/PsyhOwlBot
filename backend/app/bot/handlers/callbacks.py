@@ -42,7 +42,7 @@ async def my_referral_callback(callback: CallbackQuery, session: AsyncSession):
     await callback.message.answer(
         "🔗 <b>Твоя персональная реферальная ссылка:</b>\n\n"
         f"{link}\n\n"
-        "Отправляй её пользователям — все новые пользователи будут засчитаны за тобой 🦉",
+        "Работай усерднее, чтобы как можно больше пользователей пришло по твоей ссылке, ведь в топе администраторов видно кто самый крутой инвайтер🦉",
         parse_mode="HTML",
     )
     await callback.answer()
