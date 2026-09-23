@@ -21,7 +21,7 @@ class SupportStates(StatesGroup):
 
 def support_claim_keyboard(message_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-        text="✏️ Взять в обработку",
+        text="💬 Ответить",
         callback_data=f"support_claim:{message_id}"
     )]])
 
@@ -37,8 +37,7 @@ async def send_support_prompt(message: Message, state: FSMContext):
     await state.set_state(SupportStates.waiting_message)
     await message.answer(
         "📨 <b>Техническая поддержка Совёнка</b>\n\n"
-        "Напиши интересующий тебя вопрос и наша команда ответит тебе в течении пары мгновений!\n\n"
-        "🗒 Отвечаем очень быстро с 05:00 — 00:00",
+        "Напиши интересующий тебя вопрос. Ответ придёт сюда в этот чат.",
         parse_mode="HTML"
     )
 
@@ -50,34 +49,28 @@ async def support_handler(message: Message, state: FSMContext):
 
 @router.message(SupportStates.waiting_message, F.text)
 async def support_relay(message: Message, state: FSMContext, session: AsyncSession):
-    text = (
-        "❗️ <b>ВНИМАНИЕ, НОВОЕ ОБРАЩЕНИЕ!</b>\n\n"
-        f"💔 <b>Пользователь:</b> @{escape(message.from_user.username or str(message.from_user.id))}\n\n"
-        f"💬 <b>Сообщение:</b>\n{escape(message.text)}"
-    )
-
     sent = await message.bot.send_message(
         SUPPORT_GROUP_ID,
-        text,
+        "❗️ <b>НОВОЕ ОБРАЩЕНИЕ</b>\n\n"
+        f"👤 Пользователь: @{escape(message.from_user.username or str(message.from_user.id))}\n\n"
+        f"💬 Сообщение:\n{escape(message.text)}",
         parse_mode="HTML"
     )
-    await message.bot.edit_message_reply_markup(
-        SUPPORT_GROUP_ID,
-        sent.message_id,
-        reply_markup=support_claim_keyboard(sent.message_id)
-    )
 
-    session.add(
-        SupportMessage(
-            user_id=message.from_user.id,
-            support_message_id=sent.message_id
-        )
-    )
+    await sent.edit_reply_markup(reply_markup=support_claim_keyboard(sent.message_id))
+
+    session.add(SupportMessage(
+        user_id=message.from_user.id,
+        support_message_id=sent.message_id,
+        status="new"
+    ))
     await session.commit()
     await state.clear()
 
     await message.answer(
-        "❤️ Благодарим за обращение! ❤️",
+        "✅ Ваше обращение принято!\n\n"
+        "Мы передали его в техническую поддержку.\n"
+        "Ответ придёт сюда в этот чат.",
         reply_markup=back_menu_keyboard()
     )
 
@@ -90,36 +83,41 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         return
 
     message_id = int(callback.data.split(":", 1)[1])
-
-    result = await session.execute(
-        select(SupportMessage).where(
-            SupportMessage.support_message_id == message_id
-        )
-    )
+    result = await session.execute(select(SupportMessage).where(
+        SupportMessage.support_message_id == message_id
+    ))
     request = result.scalar_one_or_none()
 
-    if request is None:
+    if not request:
         await callback.answer("Обращение не найдено", show_alert=True)
         return
 
     if request.admin_id:
-        existing_admin = await get_admin_by_telegram_id(session, request.admin_id)
-        username = existing_admin.username if existing_admin and existing_admin.username else str(request.admin_id)
+        existing = await get_admin_by_telegram_id(session, request.admin_id)
+        username = existing.username if existing and existing.username else str(request.admin_id)
         await callback.answer(
-            f"Это обращение уже в обработке администратором @{username}",
+            f"⚠️ Это обращение уже взял в обработку админ @{username}",
             show_alert=True
         )
         return
 
     request.admin_id = callback.from_user.id
+    request.status = "processing"
     await session.commit()
 
     username = callback.from_user.username or str(callback.from_user.id)
-
     await callback.message.edit_text(
-        callback.message.html_text + f"\n\n👤 <b>Взято в обработку админом @{escape(username)}</b>",
-        parse_mode="HTML",
-        reply_markup=None
+        callback.message.html_text + "\n\n"
+        "✅ <b>Взято в работу</b>\n"
+        f"Администратор: @{escape(username)}",
+        parse_mode="HTML"
+    )
+
+    await callback.message.bot.send_message(
+        SUPPORT_GROUP_ID,
+        "✅ <b>Обращение принято в работу</b>\n\n"
+        f"Администратор @{escape(username)} начал обработку обращения пользователя.",
+        parse_mode="HTML"
     )
     await callback.answer()
 
@@ -129,18 +127,17 @@ async def support_reply_handler(message: Message, session: AsyncSession):
     if message.chat.id != SUPPORT_GROUP_ID:
         return
 
-    result = await session.execute(
-        select(SupportMessage).where(
-            SupportMessage.support_message_id == message.reply_to_message.message_id
-        )
-    )
+    result = await session.execute(select(SupportMessage).where(
+        SupportMessage.support_message_id == message.reply_to_message.message_id
+    ))
     support_request = result.scalar_one_or_none()
 
-    if support_request is None:
+    if not support_request:
         return
 
     await message.bot.send_message(
         support_request.user_id,
-        f"🦉 <b>Ответ поддержки:</b>\n\n{escape(message.text or '')}",
+        "💬 <b>Ответ поддержки:</b>\n\n"
+        f"{escape(message.text or '')}",
         parse_mode="HTML"
     )
