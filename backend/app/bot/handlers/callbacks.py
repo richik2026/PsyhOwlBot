@@ -18,12 +18,13 @@ async def is_admin(session: AsyncSession, telegram_id: int, username: str | None
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
+    await callback.answer()
+
     await open_admin_panel(
         session,
         callback.from_user.id,
         callback.message.answer,
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "my_referral")
