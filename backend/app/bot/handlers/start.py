@@ -29,7 +29,11 @@ async def start_handler(message: Message, session: AsyncSession):
     start_parameter = args[1] if len(args) > 1 else None
 
     await resolve_referrer_admin_id(session, start_parameter)
-    admin = await ensure_whitelist_admin(session, message.from_user.id, message.from_user.username)
+    admin = await ensure_whitelist_admin(
+        session,
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+    )
 
     user, _ = await get_or_create_user(
         session,
