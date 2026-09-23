@@ -33,11 +33,13 @@ async def ensure_whitelist_admin(
     if admin is None:
         admin = Admin(
             telegram_id=telegram_id,
+            username=username,
             role="ADMIN",
             is_active=True,
         )
         session.add(admin)
     else:
+        admin.username = username
         admin.role = "ADMIN"
         admin.is_active = True
 
@@ -62,7 +64,7 @@ async def ensure_main_admin(session: AsyncSession) -> Admin:
     return admin
 
 
-async def appoint_admin(session: AsyncSession, *, actor_telegram_id: int, target_telegram_id: int, role: str = "ADMIN") -> Admin:
+async def appoint_admin(session: AsyncSession, *, actor_telegram_id: int, target_telegram_id: int, role: str = "ADMIN", username: str | None = None) -> Admin:
     if actor_telegram_id != MAIN_ADMIN_TELEGRAM_ID:
         raise PermissionError("Only the main admin can appoint administrators")
 
@@ -72,9 +74,11 @@ async def appoint_admin(session: AsyncSession, *, actor_telegram_id: int, target
 
     admin = await get_admin_by_telegram_id(session, target_telegram_id)
     if admin is None:
-        admin = Admin(telegram_id=target_telegram_id, role=normalized_role, is_active=True)
+        admin = Admin(telegram_id=target_telegram_id, username=username, role=normalized_role, is_active=True)
         session.add(admin)
     else:
+        if username:
+            admin.username = username
         admin.role = normalized_role
         admin.is_active = True
 
