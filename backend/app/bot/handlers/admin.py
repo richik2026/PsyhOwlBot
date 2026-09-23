@@ -46,41 +46,21 @@ async def my_stats(message: Message, session: AsyncSession):
 @router.message(Command("admin"))
 async def admin_command(message: Message, session: AsyncSession):
     parts = message.text.split()
-
     if len(parts) != 2:
         await message.answer("Использование:\n/admin USER_ID")
         return
-
     try:
         target_id = int(parts[1])
     except ValueError:
         await message.answer("USER_ID должен быть числом")
         return
-
     try:
-        admin = await appoint_admin(
-            session,
-            actor_telegram_id=message.from_user.id,
-            target_telegram_id=target_id,
-        )
-
+        admin = await appoint_admin(session, actor_telegram_id=message.from_user.id, target_telegram_id=target_id)
         referral = await get_or_create_admin_referral(session, admin)
         bot_username = (await message.bot.get_me()).username
         link = build_referral_url(bot_username, referral.code)
-
-        await message.bot.send_message(
-            target_id,
-            "Поздравляю, ты стал частью семьи!\n"
-            "Welcome to the Sovenok Imperia🦉\n\n"
-            f"Твоя персональная ссылка:\n\n{link}\n\n"
-            "Все пользователи, которые придут по ней и оформят подписку, "
-            "будут учитываться в твоей статистике 📈",
-        )
-
+        await message.bot.send_message(target_id, f"Поздравляю, ты стал частью семьи!\nWelcome to the Sovenok Imperia🦉\n\nТвоя персональная ссылка:\n\n{link}")
         await session.commit()
         await message.answer("Администратор назначен и ссылка отправлена 🦉")
-
     except PermissionError:
         await message.answer("Недостаточно прав")
-    except Exception as exc:
-        await message.answer(f"Ошибка назначения администратора: {exc}")
