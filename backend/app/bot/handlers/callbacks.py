@@ -23,6 +23,13 @@ async def is_admin(session: AsyncSession, telegram_id: int, username: str | None
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
+    await ensure_whitelist_admin(
+        session,
+        telegram_id=callback.from_user.id,
+        username=callback.from_user.username,
+    )
+    await session.commit()
+
     await open_admin_panel(
         session,
         callback.from_user.id,
