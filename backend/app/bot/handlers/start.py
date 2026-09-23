@@ -62,7 +62,6 @@ async def start_handler(message: Message, session: AsyncSession):
             "━━━━━━━━━━━━━━\n\n"
             "🔶 Подписка: Активна ✅\n\n"
             f"🔶 Доступно: {hours} часов разговора со мной ⌛️\n\n"
-            "━━━━━━━━━━━━━━\n\n"
             f"Подписка закончится через: {finish}. 🗓"
         )
     else:
