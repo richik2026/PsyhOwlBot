@@ -15,6 +15,18 @@ from app.referrals.service import build_referral_url, get_or_create_admin_referr
 router = Router()
 
 
+def get_place_icon(index: int) -> str:
+    """Иконка места в рейтинге"""
+    if index == 1:
+        return "🥇"
+    elif index == 2:
+        return "🥈"
+    elif index == 3:
+        return "🥉"
+    else:
+        return "🐣"
+
+
 def admin_panel_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -32,7 +44,11 @@ async def open_admin_panel(session: AsyncSession, telegram_id: int, send):
         return
 
     data = await get_admin_dashboard(session, admin)
-    await send(format_admin_dashboard(data), parse_mode="HTML", reply_markup=admin_panel_keyboard())
+    await send(
+        format_admin_dashboard(data),
+        parse_mode="HTML",
+        reply_markup=admin_panel_keyboard()
+    )
 
 
 async def _send_admin_panel(message: Message, session: AsyncSession):
@@ -52,13 +68,19 @@ async def my_stats(message: Message, session: AsyncSession):
 @router.message(Command("userstop"))
 async def userstop(message: Message, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
+
     if admin is None or not admin.is_active:
         await message.answer("Эта команда доступна только администраторам")
         return
 
     admin_user = aliased(User)
+
     result = await session.execute(
-        select(Admin.id, admin_user.username, func.count(User.id).label("users_count"))
+        select(
+            Admin.id,
+            admin_user.username,
+            func.count(User.id).label("users_count")
+        )
         .outerjoin(User, User.referrer_admin_id == Admin.id)
         .outerjoin(admin_user, admin_user.telegram_id == Admin.telegram_id)
         .where(Admin.is_active.is_(True))
@@ -66,22 +88,36 @@ async def userstop(message: Message, session: AsyncSession):
         .order_by(func.count(User.id).desc())
     )
 
-    lines = ["🏆 <b>Топ администраторов по приглашённым пользователям</b>", ""]
+    lines = [
+        "🏆 <b>Топ администраторов по приглашённым пользователям</b>",
+        ""
+    ]
+
     for index, row in enumerate(result.all(), 1):
         username = f"@{row.username}" if row.username else f"ID {row.id}"
-        lines.append(f"{index}. {username} — 👥 {row.users_count} пользователей")
+        medal = get_place_icon(index)
 
-    await message.answer("\n".join(lines), parse_mode="HTML")
+        lines.append(
+            f"{medal} <b>{index} место</b> — {username}\n"
+            f"👥 Пользователей: {row.users_count}"
+        )
+
+    await message.answer(
+        "\n\n".join(lines),
+        parse_mode="HTML"
+    )
 
 
 @router.message(Command("moneytop"))
 async def moneytop(message: Message, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
+
     if admin is None or not admin.is_active:
         await message.answer("Эта команда доступна только администраторам")
         return
 
     admin_user = aliased(User)
+
     result = await session.execute(
         select(
             Admin.id,
@@ -96,32 +132,68 @@ async def moneytop(message: Message, session: AsyncSession):
         .order_by(func.sum(Sale.amount).desc())
     )
 
-    lines = ["💰 <b>Топ администраторов по продажам</b>", ""]
+    lines = [
+        "💰 <b>Топ администраторов по продаже подписок</b>",
+        ""
+    ]
+
     for index, row in enumerate(result.all(), 1):
         username = f"@{row.username}" if row.username else f"ID {row.id}"
-        lines.append(f"{index}. {username}\n👥 Покупателей: {row.sales_count}\n💳 Сумма: {row.money} ₽")
+        medal = get_place_icon(index)
 
-    await message.answer("\n\n".join(lines), parse_mode="HTML")
+        lines.append(
+            f"{medal} <b>{index} место</b> — {username}\n"
+            f"👥 Покупателей: {row.sales_count}\n"
+            f"💳 Сумма: {row.money} ₽"
+        )
+
+    await message.answer(
+        "\n\n".join(lines),
+        parse_mode="HTML"
+    )
 
 
 @router.message(Command("admin"))
 async def admin_command(message: Message, session: AsyncSession):
     parts = message.text.split()
+
     if len(parts) != 2:
         await message.answer("Использование:\n/admin USER_ID")
         return
+
     try:
         target_id = int(parts[1])
     except ValueError:
         await message.answer("USER_ID должен быть числом")
         return
+
     try:
-        admin = await appoint_admin(session, actor_telegram_id=message.from_user.id, target_telegram_id=target_id)
+        admin = await appoint_admin(
+            session,
+            actor_telegram_id=message.from_user.id,
+            target_telegram_id=target_id
+        )
+
         referral = await get_or_create_admin_referral(session, admin)
+
         bot_username = (await message.bot.get_me()).username
-        link = build_referral_url(bot_username, referral.code)
-        await message.bot.send_message(target_id, f"Поздравляю, ты стал частью семьи!\n\nТвоя персональная ссылка:\n{link}")
+
+        link = build_referral_url(
+            bot_username,
+            referral.code
+        )
+
+        await message.bot.send_message(
+            target_id,
+            f"🦉 Поздравляю, ты стал частью семьи!\n\n"
+            f"🤍 Твоя персональная ссылка:\n{link}"
+        )
+
         await session.commit()
-        await message.answer("Администратор назначен и ссылка отправлена 🦉")
+
+        await message.answer(
+            "Администратор назначен и ссылка отправлена 🦉"
+        )
+
     except PermissionError:
         await message.answer("Недостаточно прав")
