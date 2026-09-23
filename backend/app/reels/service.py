@@ -20,22 +20,28 @@ ADMIN_USERNAMES = {
 
 async def add_reels(session: AsyncSession, admin_id: int, number_of_reels: int):
     today = date.today()
+
     result = await session.execute(
         select(AdminReels).where(
             AdminReels.admin_id == admin_id,
             func.date(AdminReels.date) == today,
         )
     )
+
     item = result.scalar_one_or_none()
 
     if item:
         item.number_of_reels = number_of_reels
         item.updated_at = datetime.utcnow()
     else:
-        item = AdminReels(admin_id=admin_id, number_of_reels=number_of_reels)
+        item = AdminReels(
+            admin_id=admin_id,
+            number_of_reels=number_of_reels
+        )
         session.add(item)
 
     await session.flush()
+
     return item
 
 
@@ -46,6 +52,7 @@ async def get_reels_rating_today(session: AsyncSession, limit: int = 10):
         .order_by(desc(AdminReels.number_of_reels))
         .limit(limit)
     )
+
     return result.scalars().all()
 
 
@@ -60,18 +67,37 @@ async def get_reels_total_rating(session: AsyncSession, limit: int = 10):
         .order_by(desc("total"))
         .limit(limit)
     )
+
     return result.all()
 
 
 async def format_reels_total_rating(session: AsyncSession):
     items = await get_reels_total_rating(session)
+
     username_by_id = {
         8707664475: "bo0odyaa",
     }
 
-    lines = ["🏆 Топ Администраторов по количеству Reels:\n\n"]
+    place_icons = {
+        1: "🥇",
+        2: "🥈",
+        3: "🥉",
+    }
+
+    lines = [
+        "🏆 Топ Администраторов по количеству Reels:\n"
+    ]
+
     for index, item in enumerate(items, 1):
-        username = username_by_id.get(item.telegram_id, f"ID {item.telegram_id}")
-        lines.append(f"{index}. @{username} — {item.total}")
+        username = username_by_id.get(
+            item.telegram_id,
+            f"ID {item.telegram_id}"
+        )
+
+        icon = place_icons.get(index, "🐣")
+
+        lines.append(
+            f"{icon} @{username} — {item.total}"
+        )
 
     return "\n".join(lines)
