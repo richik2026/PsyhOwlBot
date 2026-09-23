@@ -148,7 +148,7 @@ async def userstop(message: Message, session: AsyncSession):
 
 
     await message.answer(
-        "\n\n".join(lines),
+        "".join(lines),
         parse_mode="HTML"
     )
 
@@ -231,7 +231,7 @@ async def moneytop(message: Message, session: AsyncSession):
 
 
     await message.answer(
-        "\n\n".join(lines),
+        "".join(lines),
         parse_mode="HTML"
     )
 
