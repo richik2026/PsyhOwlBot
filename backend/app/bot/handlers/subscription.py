@@ -10,11 +10,11 @@ TRIBUTE_URL = "https://t.me/tribute/app?startapp=s12Ac"
 async def subscription_handler(message: Message) -> None:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оформить подписку", url=TRIBUTE_URL)]
+            [InlineKeyboardButton(text="🤍 Активировать подписку", url=TRIBUTE_URL)]
         ]
     )
     await message.answer(
-        "Подписка открывает 60 часов разговоров с Кришем на 30 дней. "
-        "Дневной лимит — до 2 часов.",
+        "🤍 Открой доступ к 60 часам разговоров с Кришем на целый месяц!"
+        "🦉 Общайся с настоящим психологическим другом обученным на материалах лучших мировых университетов и не переплачивай деньги психологам!",
         reply_markup=keyboard,
     )
