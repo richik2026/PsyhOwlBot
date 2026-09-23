@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot.handlers.admin import open_admin_panel
 from app.bot.states.reels import ReelsStates
 from app.admins.service import get_admin_by_telegram_id
+from app.referrals.service import get_or_create_admin_referral, build_referral_url
 
 router = Router()
 
@@ -21,6 +22,27 @@ async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
         session,
         callback.from_user.id,
         callback.message.answer,
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "my_referral")
+async def my_referral_callback(callback: CallbackQuery, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, callback.from_user.id)
+    if admin is None or not admin.is_active:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    referral = await get_or_create_admin_referral(session, admin)
+    bot_username = (await callback.bot.get_me()).username
+    link = build_referral_url(bot_username, referral.code)
+    await session.commit()
+
+    await callback.message.answer(
+        "🔗 <b>Твоя персональная реферальная ссылка:</b>\n\n"
+        f"{link}\n\n"
+        "Отправляй её пользователям — все новые пользователи будут засчитаны за тобой 🦉",
+        parse_mode="HTML",
     )
     await callback.answer()
 
