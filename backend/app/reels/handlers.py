@@ -42,8 +42,9 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
 
     rating = await get_reels_rating_today(session)
     place = next((i for i, item in enumerate(rating, 1) if item.admin_id == admin.id), 0)
+    place_text = str(place) if place else "первое"
 
     await state.clear()
     await message.answer(
-        f"👍 Спасибо за работу, коллега!\n\n⚡ Теперь вы в топе {place} место"
+        f"👍 Спасибо за работу, коллега!\n\n⚡ Теперь вы в топе {place_text} место"
     )
