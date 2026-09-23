@@ -1,13 +1,52 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
 from app.admins.service import get_admin_by_telegram_id
 from app.bot.states.reels import ReelsStates
+from app.support.models import SupportMessage
 
 router = Router()
+
+
+@router.callback_query(F.data.startswith("support_claim:"))
+async def support_claim_callback(callback: CallbackQuery, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, callback.from_user.id)
+
+    if admin is None or not admin.is_active:
+        await callback.answer("Только администраторы могут брать обращения", show_alert=True)
+        return
+
+    message_id = int(callback.data.split(":")[1])
+    result = await session.execute(
+        select(SupportMessage).where(
+            SupportMessage.support_message_id == message_id
+        )
+    )
+    request = result.scalar_one_or_none()
+
+    if request is None:
+        await callback.answer("Обращение не найдено", show_alert=True)
+        return
+
+    if request.admin_id:
+        await callback.answer(
+            f"Это обращение уже в обработке администратором @{request.admin_id}",
+            show_alert=True,
+        )
+        return
+
+    request.admin_id = callback.from_user.id
+    await session.commit()
+
+    await callback.message.answer(
+        f"👤 <i>Взято в обработку админом @{callback.from_user.username}</i>",
+        parse_mode="HTML",
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data == "talk")
