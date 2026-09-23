@@ -23,7 +23,7 @@ async def is_admin(session: AsyncSession, telegram_id: int, username: str | None
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
-    await _send_admin_panel(callback.message, session)
+    await _send_admin_panel(callback.message, session, telegram_id=callback.from_user.id)
     await callback.answer()
 
 
