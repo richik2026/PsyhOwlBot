@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
 from app.admins.service import appoint_admin, get_admin_by_telegram_id
@@ -62,20 +63,26 @@ async def userstop(message: Message, session: AsyncSession):
         await message.answer("Эта команда доступна только администраторам")
         return
 
+    admin_user = aliased(User)
+
     result = await session.execute(
         select(
             Admin.id,
-            func.count(User.id).label("users_count")
+            admin_user.username,
+            func.count(User.id).label("users_count"),
         )
         .outerjoin(User, User.referrer_admin_id == Admin.id)
+        .outerjoin(admin_user, admin_user.telegram_id == Admin.telegram_id)
         .where(Admin.is_active.is_(True))
-        .group_by(Admin.id)
+        .group_by(Admin.id, admin_user.username)
         .order_by(func.count(User.id).desc())
     )
 
     lines = ["🏆 <b>Топ администраторов по приглашённым пользователям</b>", ""]
+
     for index, row in enumerate(result.all(), 1):
-        lines.append(f"{index}. Админ #{row.id} — 👥 {row.users_count} пользователей")
+        username = f"@{row.username}" if row.username else f"ID {row.id}"
+        lines.append(f"{index}. {username} — 👥 {row.users_count} пользователей")
 
     await message.answer("\n".join(lines), parse_mode="HTML")
 
