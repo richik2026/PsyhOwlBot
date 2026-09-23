@@ -49,5 +49,5 @@ async def format_reels_rating(session: AsyncSession):
     lines = ["📊 Рилсы за сегодня:"]
     for index, item in enumerate(items, 1):
         prefix = medals[index - 1] if index <= 3 else f"{index}."
-        lines.append(f"{prefix} — {item.number_of_reels}")
+        lines.append(f"{prefix} Админ #{item.admin_id} — {item.number_of_reels}")
     return "\n".join(lines)
