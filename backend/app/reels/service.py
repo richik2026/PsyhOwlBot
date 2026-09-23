@@ -69,7 +69,7 @@ async def format_reels_total_rating(session: AsyncSession):
         8707664475: "bo0odyaa",
     }
 
-    lines = ["🏆 Топ Администраторов по количеству Reels:"]
+    lines = ["🏆 Топ Администраторов по количеству Reels:\n\n"]
     for index, item in enumerate(items, 1):
         username = username_by_id.get(item.telegram_id, f"ID {item.telegram_id}")
         lines.append(f"{index}. @{username} — {item.total}")
