@@ -22,9 +22,7 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
 
     message_id = int(callback.data.split(":")[1])
     result = await session.execute(
-        select(SupportMessage).where(
-            SupportMessage.support_message_id == message_id
-        )
+        select(SupportMessage).where(SupportMessage.support_message_id == message_id)
     )
     request = result.scalar_one_or_none()
 
@@ -33,8 +31,10 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
         return
 
     if request.admin_id:
+        existing_admin = await get_admin_by_telegram_id(session, request.admin_id)
+        username = existing_admin.username if existing_admin else str(request.admin_id)
         await callback.answer(
-            f"Это обращение уже в обработке администратором @{request.admin_id}",
+            f"Это обращение уже в обработке администратором @{username}",
             show_alert=True,
         )
         return
@@ -42,21 +42,11 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
     request.admin_id = callback.from_user.id
     await session.commit()
 
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.edit_text(
-        callback.message.html_text
-        + "\n\n👤 <i>Взято в обработку админом @"
-        + (callback.from_user.username or str(callback.from_user.id))
-        + "</i>",
-        parse_mode="HTML",
-    )
+    username = callback.from_user.username or str(callback.from_user.id)
+    new_text = (callback.message.html_text or callback.message.text or "")
+    new_text += f"\n\n👤 <i>Взято в обработку админом @{username}</i>"
 
-    await callback.answer()
-
-
-@router.callback_query(F.data == "talk")
-async def talk_callback(callback: CallbackQuery):
-    await callback.message.answer("Я рядом 🦉\n\nРасскажи, что сейчас происходит. О чём хочешь поговорить?")
+    await callback.message.edit_text(new_text, parse_mode="HTML", reply_markup=None)
     await callback.answer()
 
 
@@ -72,6 +62,12 @@ async def support_callback(callback: CallbackQuery):
     await callback.answer()
 
 
+@router.callback_query(F.data == "talk")
+async def talk_callback(callback: CallbackQuery):
+    await callback.message.answer("Я рядом 🦉\n\nРасскажи, что сейчас происходит. О чём хочешь поговорить?")
+    await callback.answer()
+
+
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
@@ -79,6 +75,7 @@ async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
         await callback.message.answer("Эта команда доступна только администраторам")
         await callback.answer()
         return
+
     data = await get_admin_dashboard(session, admin)
     await callback.message.answer(format_admin_dashboard(data), parse_mode="HTML")
     await callback.answer()
