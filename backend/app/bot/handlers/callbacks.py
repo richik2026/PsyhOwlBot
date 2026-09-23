@@ -13,14 +13,14 @@ router = Router()
 
 async def is_admin(session: AsyncSession, telegram_id: int):
     admin = await get_admin_by_telegram_id(session, telegram_id)
-    return admin and admin.is_active and admin.role in {"ADMIN", "SUPER_ADMIN"}
+    return admin and admin.is_active
 
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
 
-    if not admin or not admin.is_active or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
+    if not admin or not admin.is_active:
         await callback.answer("Эта команда доступна только администраторам", show_alert=True)
         return
 
