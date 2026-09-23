@@ -1,10 +1,13 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
 from app.admins.service import appoint_admin, get_admin_by_telegram_id
+from app.admins.models import Admin
+from app.users.models import User
 from app.referrals.service import build_referral_url, get_or_create_admin_referral
 
 router = Router()
@@ -13,7 +16,8 @@ router = Router()
 def admin_panel_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Добавить рилсы", callback_data="add_reels")]
+            [InlineKeyboardButton(text="➕ Добавить рилсы", callback_data="add_reels")],
+            [InlineKeyboardButton(text="🔗 Моя реферальная ссылка", callback_data="my_referral")],
         ]
     )
 
@@ -49,6 +53,31 @@ async def admin_panel(message: Message, session: AsyncSession):
 @router.message(Command("my_stats"))
 async def my_stats(message: Message, session: AsyncSession):
     await _send_admin_panel(message, session)
+
+
+@router.message(Command("userstop"))
+async def userstop(message: Message, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, message.from_user.id)
+    if admin is None or not admin.is_active:
+        await message.answer("Эта команда доступна только администраторам")
+        return
+
+    result = await session.execute(
+        select(
+            Admin.id,
+            func.count(User.id).label("users_count")
+        )
+        .outerjoin(User, User.referrer_admin_id == Admin.id)
+        .where(Admin.is_active.is_(True))
+        .group_by(Admin.id)
+        .order_by(func.count(User.id).desc())
+    )
+
+    lines = ["🏆 <b>Топ администраторов по приглашённым пользователям</b>", ""]
+    for index, row in enumerate(result.all(), 1):
+        lines.append(f"{index}. Админ #{row.id} — 👥 {row.users_count} пользователей")
+
+    await message.answer("\n".join(lines), parse_mode="HTML")
 
 
 @router.message(Command("admin"))
