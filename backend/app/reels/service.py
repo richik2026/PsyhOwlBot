@@ -19,25 +19,19 @@ ADMIN_USERNAMES = {
 
 async def add_reels(session: AsyncSession, admin_id: int, number_of_reels: int):
     today = date.today()
-
     result = await session.execute(
         select(AdminReels).where(
             AdminReels.admin_id == admin_id,
             func.date(AdminReels.date) == today,
         )
     )
-
     item = result.scalar_one_or_none()
 
     if item:
         item.number_of_reels = number_of_reels
-        item.date = datetime.utcnow()
+        item.updated_at = datetime.utcnow()
     else:
-        item = AdminReels(
-            admin_id=admin_id,
-            number_of_reels=number_of_reels,
-            date=datetime.utcnow(),
-        )
+        item = AdminReels(admin_id=admin_id, number_of_reels=number_of_reels)
         session.add(item)
 
     await session.flush()
@@ -54,14 +48,22 @@ async def get_reels_rating_today(session: AsyncSession, limit: int = 10):
     return result.scalars().all()
 
 
-async def format_reels_rating(session: AsyncSession):
-    items = await get_reels_rating_today(session)
-    medals = ["🥇", "🥈", "🥉"]
-    lines = ["📊 Рилсы за сегодня:"]
+async def get_reels_total_rating(session: AsyncSession, limit: int = 10):
+    result = await session.execute(
+        select(
+            AdminReels.admin_id,
+            func.sum(AdminReels.number_of_reels).label("total")
+        )
+        .group_by(AdminReels.admin_id)
+        .order_by(desc("total"))
+        .limit(limit)
+    )
+    return result.all()
 
+
+async def format_reels_total_rating(session: AsyncSession):
+    items = await get_reels_total_rating(session)
+    lines = ["📊 Топ Reels за всё время:"]
     for index, item in enumerate(items, 1):
-        prefix = medals[index - 1] if index <= 3 else f"{index}."
-        username = ADMIN_USERNAMES.get(str(item.admin_id), f"admin_{item.admin_id}")
-        lines.append(f"{prefix} @{username} — {item.number_of_reels}")
-
+        lines.append(f"{index}. Admin {item.admin_id} — {item.total}")
     return "\n".join(lines)
