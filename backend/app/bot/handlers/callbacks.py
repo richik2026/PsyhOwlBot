@@ -4,21 +4,34 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
-from app.admins.service import get_admin_by_telegram_id
+from app.admins.service import get_admin_by_telegram_id, ensure_whitelist_admin
 from app.bot.keyboards.admin import admin_menu
 from app.bot.states.reels import ReelsStates
 
 router = Router()
 
 
-async def is_admin(session: AsyncSession, telegram_id: int):
+async def is_admin(session: AsyncSession, telegram_id: int, username: str | None = None):
     admin = await get_admin_by_telegram_id(session, telegram_id)
+    if admin is None and username:
+        admin = await ensure_whitelist_admin(
+            session,
+            telegram_id=telegram_id,
+            username=username,
+        )
     return admin and admin.is_active
 
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
+
+    if admin is None:
+        admin = await ensure_whitelist_admin(
+            session,
+            telegram_id=callback.from_user.id,
+            username=callback.from_user.username,
+        )
 
     if not admin or not admin.is_active:
         await callback.answer("Эта команда доступна только администраторам", show_alert=True)
@@ -36,7 +49,7 @@ async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data == "add_reels")
 async def add_reels_callback(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    if not await is_admin(session, callback.from_user.id):
+    if not await is_admin(session, callback.from_user.id, callback.from_user.username):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
