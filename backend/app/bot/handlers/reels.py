@@ -1,6 +1,6 @@
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.service import get_admin_by_telegram_id
@@ -15,10 +15,21 @@ async def is_admin(session: AsyncSession, telegram_id: int):
     return admin and admin.is_active and admin.role in {"ADMIN", "SUPER_ADMIN"}
 
 
+@router.callback_query(F.data == "add_reels")
+async def add_reels_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    if not await is_admin(session, callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    await state.set_state(ReelsStates.waiting_for_amount)
+    await callback.message.answer("Введите количество рилсов, которое вы хотите добавить:")
+    await callback.answer()
+
+
 @router.message(ReelsStates.waiting_for_amount)
 async def save_reels_amount(message: Message, state: FSMContext, session: AsyncSession):
     if not message.text or not message.text.isdigit():
-        await message.answer("❗️УКАЖИТЕ ЦИФРУ!")
+        await message.answer("Введите число рилсов цифрами")
         return
 
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
@@ -34,7 +45,6 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
 
     await state.clear()
     await message.answer(
-        "👍 <b>Спасибо за работу, коллега!</b>\n\n"
-        f"⚡ Теперь вы в топе <b>{place or '-'} место</b>",
-        parse_mode="HTML",
+        "Благодарю вас за работу, коллега\n\n"
+        f"Ваш результат добавлен в статистику. Место за сегодня: {place or '-'}"
     )
