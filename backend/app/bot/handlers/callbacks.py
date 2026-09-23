@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
 from app.admins.service import get_admin_by_telegram_id
+from app.bot.keyboards.main import main_menu
 from app.bot.states.reels import ReelsStates
 from app.support.models import SupportMessage
 
@@ -46,18 +47,29 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
     new_text = callback.message.html_text or callback.message.text or ""
     new_text += f"\n\n👤 <i>Взято в обработку админом @{username}</i>"
 
-    await callback.message.edit_text(new_text, parse_mode="HTML", reply_markup=None)
+    await callback.message.edit_text(
+        new_text,
+        parse_mode="HTML",
+        reply_markup=None,
+    )
     await callback.answer()
 
 
 @router.callback_query(F.data == "support")
-async def support_callback(callback: CallbackQuery):
+async def support_callback(callback: CallbackQuery, state: FSMContext):
+    from app.bot.handlers.support import send_support_prompt
+    await send_support_prompt(callback.message, state)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "main_menu")
+async def main_menu_callback(callback: CallbackQuery, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, callback.from_user.id)
+    is_admin = bool(admin and admin.is_active and admin.role in {"ADMIN", "SUPER_ADMIN"})
+
     await callback.message.answer(
-        "✏️ <b>Техническая поддержка Совёнка</b>\n\n"
-        "📨 Напиши интересующий тебя вопрос и наша команда\n"
-        "ответит тебе в течении пары мгновений!\n\n"
-        "🗒 Отвечаем очень быстро с 05:00 — 00:00",
-        parse_mode="HTML",
+        "🦉 Главное меню",
+        reply_markup=main_menu(is_admin=is_admin, has_subscription=is_admin),
     )
     await callback.answer()
 
