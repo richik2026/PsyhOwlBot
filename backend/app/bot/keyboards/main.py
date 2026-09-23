@@ -16,7 +16,7 @@ def main_menu(is_admin: bool = False, has_subscription: bool = False) -> InlineK
             [InlineKeyboardButton(text="💬 Чат с поддержкой", callback_data="support")],
             [InlineKeyboardButton(text="💳 Продлить подписку", url=SUBSCRIPTION_URL)],
             [InlineKeyboardButton(text="📕 Подробнее о нас", callback_data="about_project")],
-            [InlineKeyboardButton(text="👑 Админ-панель", callback_data="admin_panel")],
+            [InlineKeyboardButton(text="👑 Админ-панель", switch_inline_query_current_chat="/admin_panel")],
         ]
     else:
         buttons = [
