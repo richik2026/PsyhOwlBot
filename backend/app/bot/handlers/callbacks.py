@@ -16,7 +16,7 @@ router = Router()
 async def support_claim_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
 
-    if admin is None or not admin.is_active:
+    if admin is None or not admin.is_active or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
         await callback.answer("Только администраторы могут брать обращения", show_alert=True)
         return
 
@@ -32,7 +32,7 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
 
     if request.admin_id:
         existing_admin = await get_admin_by_telegram_id(session, request.admin_id)
-        username = existing_admin.username if existing_admin else str(request.admin_id)
+        username = existing_admin.username if existing_admin and existing_admin.username else str(request.admin_id)
         await callback.answer(
             f"Это обращение уже в обработке администратором @{username}",
             show_alert=True,
@@ -43,7 +43,7 @@ async def support_claim_callback(callback: CallbackQuery, session: AsyncSession)
     await session.commit()
 
     username = callback.from_user.username or str(callback.from_user.id)
-    new_text = (callback.message.html_text or callback.message.text or "")
+    new_text = callback.message.html_text or callback.message.text or ""
     new_text += f"\n\n👤 <i>Взято в обработку админом @{username}</i>"
 
     await callback.message.edit_text(new_text, parse_mode="HTML", reply_markup=None)
@@ -71,7 +71,7 @@ async def talk_callback(callback: CallbackQuery):
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, callback.from_user.id)
-    if admin is None or not admin.is_active:
+    if admin is None or not admin.is_active or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
         await callback.message.answer("Эта команда доступна только администраторам")
         await callback.answer()
         return
