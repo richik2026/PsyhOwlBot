@@ -29,7 +29,11 @@ async def start_handler(message: Message, session: AsyncSession):
     start_parameter = args[1] if len(args) > 1 else None
 
     referrer_admin_id = await resolve_referrer_admin_id(session, start_parameter)
-    admin = await ensure_whitelist_admin(session, telegram_id=message.from_user.id, username=message.from_user.username)
+    admin = await ensure_whitelist_admin(
+        session,
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+    )
 
     user, _ = await get_or_create_user(
         session,
@@ -47,30 +51,32 @@ async def start_handler(message: Message, session: AsyncSession):
 
     if is_admin:
         text = (
-            f"<b>Добро пожаловать, {name}!🦉</b>\n\n"
-            "🫂 <i>Меня зовут Криш, и я очень рад приветствовать тебя</i>\n\n"
-            "━━━━━━━━━━━━\n"
-            "На данный момент твоя подписка: <b>Активна</b>✅\n\n"
-            "Тебе доступно ещё: <b>2222 часов</b> разговоров со мной⌛️\n\n"
-            "Подписка закончится через: <b>Никогда</b>. 🗓"
+            f"Добро пожаловать, <b>{name}</b>!🦉\n\n"
+            "Меня зовут Криш, я рад приветствовать тебя🫂\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "🔸 Подписка: <i>Активна</i>✅\n"
+            "🔸 Доступно: <i>2222 часов</i> разговора со мной⌛️\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "Подписка закончится через: <i>Никогда</i>. 🗓"
         )
     elif has_active_access(subscription):
         days = max(0, (subscription.active_until - datetime.utcnow()).days)
         hours = remaining_seconds(subscription) // 3600
         text = (
-            f"<b>Добро пожаловать, {name}!🦉</b>\n\n"
-            "🫂 <i>Меня зовут Криш, и я очень рад приветствовать тебя</i>\n\n"
-            "━━━━━━━━━━━━\n"
-            "На данный момент твоя подписка: <b>Активна</b>✅\n\n"
-            f"Тебе доступно ещё: <b>{hours} часов</b> разговоров со мной⌛️\n\n"
-            f"Подписка закончится через: <b>{days} дней</b>. 🗓"
+            f"Добро пожаловать, <b>{name}</b>!🦉\n\n"
+            "Меня зовут Криш, я рад приветствовать тебя🫂\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "🔸 Подписка: <i>Активна</i>✅\n"
+            f"🔸 Доступно: <i>{hours} часов</i> разговора со мной⌛️\n"
+            "━━━━━━━━━━━━━━\n\n"
+            f"Подписка закончится через: <i>{days} дней</i>. 🗓"
         )
     else:
         text = (
-            f"<b>Добро пожаловать, {name}!🦉</b>\n\n"
-            "🫂 <b>Меня зовут Криш</b>\n\n"
-            "👩‍🏫 <i>Я — современный инновационный психологический друг,\n"
-            "обученный на материалах лучших мировых университетов📚</i>\n\n"
+            f"Добро пожаловать, <b>{name}</b>!🦉\n\n"
+            "🫂 Меня зовут Криш\n\n"
+            "👩‍🏫 Я — современный инновационный психологический друг,\n"
+            "обученный на материалах лучших мировых университетов📚\n\n"
             "📈 Мы сэкономили деньги на психологах более чем 100 людям,\n"
             "а возможно даже дали гораздо лучший эффект☝️\n\n"
             "Для того, чтобы воспользоваться моими услугами, необходимо активировать подписку"
@@ -80,5 +86,8 @@ async def start_handler(message: Message, session: AsyncSession):
         FSInputFile(WELCOME_IMAGE),
         caption=text,
         parse_mode="HTML",
-        reply_markup=main_menu(is_admin=is_admin, has_subscription=is_admin or has_active_access(subscription)),
+        reply_markup=main_menu(
+            is_admin=is_admin,
+            has_subscription=is_admin or has_active_access(subscription),
+        ),
     )
