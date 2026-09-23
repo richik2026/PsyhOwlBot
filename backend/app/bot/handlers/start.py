@@ -46,16 +46,15 @@ async def start_handler(message: Message, session: AsyncSession):
 
     if is_admin:
         hours = "2222"
-        end = "Никогда"
+        finish = "Никогда"
     elif has_active_access(subscription):
         hours = str(remaining_seconds(subscription) // 3600)
-        end = str(max(0, (subscription.active_until - datetime.utcnow()).days))
+        finish = f"{max(0, (subscription.active_until - datetime.utcnow()).days)} дней"
     else:
         hours = None
-        end = None
+        finish = None
 
     if hours:
-        finish = "Никогда" if end == "Никогда" else f"{end} дней"
         text = (
             f"Добро пожаловать, <b>{name}</b>! 🦉\n\n"
             "Меня зовут Криш, и я очень рад приветствовать тебя 🫂\n\n"
