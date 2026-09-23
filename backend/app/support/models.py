@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Integer
+from sqlalchemy import BigInteger, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -13,4 +13,5 @@ class SupportMessage(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     support_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     admin_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="new", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
