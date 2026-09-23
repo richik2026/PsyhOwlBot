@@ -14,14 +14,15 @@ router = Router()
 async def add_reels_handler(message: Message, state: FSMContext):
     await state.set_state(ReelsStates.waiting_for_amount)
     await message.answer(
-        "Укажите количество рилсов которое вы выложили за сегодня"
+        "📒 <b>Напиши количество рилсов которое ты опубликовал за сегодня</b>",
+        parse_mode="HTML",
     )
 
 
 @router.message(ReelsStates.waiting_for_amount)
 async def save_reels_amount(message: Message, state: FSMContext, session: AsyncSession):
     if not message.text or not message.text.isdigit():
-        await message.answer("Введите количество рилсов числом")
+        await message.answer("❗️УКАЖИТЕ ЦИФРУ!")
         return
 
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
@@ -36,5 +37,7 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
     await state.clear()
 
     await message.answer(
-        f"Количество рилсов за сегодня сохранено: {amount} 🎬"
+        "👍 <b>Спасибо за работу, коллега!</b>\n\n"
+        "⚡ Теперь вы в топе <b>формируется автоматически</b>",
+        parse_mode="HTML",
     )
