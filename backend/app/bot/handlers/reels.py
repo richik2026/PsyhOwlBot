@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.service import get_admin_by_telegram_id
 from app.bot.states.reels import ReelsStates
-from app.reels.service import add_reels
+from app.reels.service import add_reels, get_reels_rating_today
 
 router = Router()
 
@@ -34,10 +34,20 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
     amount = int(message.text)
     await add_reels(session, admin.id, amount)
     await session.commit()
+
+    rating = await get_reels_rating_today(session)
+    place = None
+    for index, item in enumerate(rating, start=1):
+        if item.admin_id == admin.id:
+            place = index
+            break
+
     await state.clear()
+
+    place_text = str(place) if place else "пока не определено"
 
     await message.answer(
         "👍 <b>Спасибо за работу, коллега!</b>\n\n"
-        "⚡ Теперь вы в топе <b>формируется автоматически</b>",
+        f"⚡ Теперь вы в топе <b>{place_text} место</b>",
         parse_mode="HTML",
     )
