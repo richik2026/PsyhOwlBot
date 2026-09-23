@@ -18,8 +18,11 @@ def admin_panel_keyboard():
     )
 
 
-async def _send_admin_panel(message: Message, session: AsyncSession):
-    admin = await get_admin_by_telegram_id(session, message.from_user.id)
+async def _send_admin_panel(message: Message, session: AsyncSession, telegram_id: int | None = None):
+    admin = await get_admin_by_telegram_id(
+        session,
+        telegram_id if telegram_id is not None else message.from_user.id,
+    )
 
     if admin is None or not admin.is_active:
         await message.answer("Эта команда доступна только администраторам")
