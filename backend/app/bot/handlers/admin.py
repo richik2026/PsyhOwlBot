@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
@@ -8,6 +8,14 @@ from app.admins.service import appoint_admin, get_admin_by_telegram_id
 from app.referrals.service import build_referral_url, get_or_create_admin_referral
 
 router = Router()
+
+
+def admin_panel_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Добавить рилсы", callback_data="add_reels")]
+        ]
+    )
 
 
 async def _send_admin_panel(message: Message, session: AsyncSession):
@@ -18,7 +26,11 @@ async def _send_admin_panel(message: Message, session: AsyncSession):
         return
 
     data = await get_admin_dashboard(session, admin)
-    await message.answer(format_admin_dashboard(data), parse_mode="HTML")
+    await message.answer(
+        format_admin_dashboard(data),
+        parse_mode="HTML",
+        reply_markup=admin_panel_keyboard(),
+    )
 
 
 @router.message(Command("admin_panel"))
