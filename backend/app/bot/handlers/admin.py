@@ -9,6 +9,7 @@ from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
 from app.admins.service import appoint_admin, get_admin_by_telegram_id
 from app.admins.models import Admin
 from app.users.models import User
+from app.sales.models import Sale
 from app.referrals.service import build_referral_url, get_or_create_admin_referral
 
 router = Router()
@@ -31,19 +32,11 @@ async def open_admin_panel(session: AsyncSession, telegram_id: int, send):
         return
 
     data = await get_admin_dashboard(session, admin)
-    await send(
-        format_admin_dashboard(data),
-        parse_mode="HTML",
-        reply_markup=admin_panel_keyboard(),
-    )
+    await send(format_admin_dashboard(data), parse_mode="HTML", reply_markup=admin_panel_keyboard())
 
 
 async def _send_admin_panel(message: Message, session: AsyncSession):
-    await open_admin_panel(
-        session,
-        message.from_user.id,
-        message.answer,
-    )
+    await open_admin_panel(session, message.from_user.id, message.answer)
 
 
 @router.message(Command("admin_panel"))
@@ -64,13 +57,8 @@ async def userstop(message: Message, session: AsyncSession):
         return
 
     admin_user = aliased(User)
-
     result = await session.execute(
-        select(
-            Admin.id,
-            admin_user.username,
-            func.count(User.id).label("users_count"),
-        )
+        select(Admin.id, admin_user.username, func.count(User.id).label("users_count"))
         .outerjoin(User, User.referrer_admin_id == Admin.id)
         .outerjoin(admin_user, admin_user.telegram_id == Admin.telegram_id)
         .where(Admin.is_active.is_(True))
@@ -79,12 +67,41 @@ async def userstop(message: Message, session: AsyncSession):
     )
 
     lines = ["🏆 <b>Топ администраторов по приглашённым пользователям</b>", ""]
-
     for index, row in enumerate(result.all(), 1):
         username = f"@{row.username}" if row.username else f"ID {row.id}"
         lines.append(f"{index}. {username} — 👥 {row.users_count} пользователей")
 
     await message.answer("\n".join(lines), parse_mode="HTML")
+
+
+@router.message(Command("moneytop"))
+async def moneytop(message: Message, session: AsyncSession):
+    admin = await get_admin_by_telegram_id(session, message.from_user.id)
+    if admin is None or not admin.is_active:
+        await message.answer("Эта команда доступна только администраторам")
+        return
+
+    admin_user = aliased(User)
+    result = await session.execute(
+        select(
+            Admin.id,
+            admin_user.username,
+            func.count(Sale.user_id).label("sales_count"),
+            func.coalesce(func.sum(Sale.amount), 0).label("money"),
+        )
+        .outerjoin(Sale, Sale.admin_id == Admin.id)
+        .outerjoin(admin_user, admin_user.telegram_id == Admin.telegram_id)
+        .where(Admin.is_active.is_(True))
+        .group_by(Admin.id, admin_user.username)
+        .order_by(func.sum(Sale.amount).desc())
+    )
+
+    lines = ["💰 <b>Топ администраторов по продажам</b>", ""]
+    for index, row in enumerate(result.all(), 1):
+        username = f"@{row.username}" if row.username else f"ID {row.id}"
+        lines.append(f"{index}. {username}\n👥 Покупателей: {row.sales_count}\n💳 Сумма: {row.money} ₽")
+
+    await message.answer("\n\n".join(lines), parse_mode="HTML")
 
 
 @router.message(Command("admin"))
@@ -103,7 +120,7 @@ async def admin_command(message: Message, session: AsyncSession):
         referral = await get_or_create_admin_referral(session, admin)
         bot_username = (await message.bot.get_me()).username
         link = build_referral_url(bot_username, referral.code)
-        await message.bot.send_message(target_id, f"Поздравляю, ты стал частью семьи!\nWelcome to the Sovenok Imperia🦉\n\nТвоя персональная ссылка:\n\n{link}")
+        await message.bot.send_message(target_id, f"Поздравляю, ты стал частью семьи!\n\nТвоя персональная ссылка:\n{link}")
         await session.commit()
         await message.answer("Администратор назначен и ссылка отправлена 🦉")
     except PermissionError:
