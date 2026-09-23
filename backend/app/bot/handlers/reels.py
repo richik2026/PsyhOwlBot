@@ -32,7 +32,7 @@ async def save_reels_amount(message: Message, state: FSMContext, session: AsyncS
     await session.commit()
 
     await state.clear()
-    await message.answer("Благодарю вас за работу, коллега")
+    await message.answer("Благодарю вас за работу, коллега!🤍")
 
 
 @router.message(Command("topreels"))
