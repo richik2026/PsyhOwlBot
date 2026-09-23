@@ -55,6 +55,7 @@ async def start_handler(message: Message, session: AsyncSession):
         end = None
 
     if hours:
+        finish = "Никогда" if end == "Никогда" else f"{end} дней"
         text = (
             f"Добро пожаловать, <b>{name}</b>! 🦉\n\n"
             "Меня зовут Криш, и я очень рад приветствовать тебя 🫂\n\n"
@@ -62,7 +63,7 @@ async def start_handler(message: Message, session: AsyncSession):
             "🔶 Подписка: Активна ✅\n\n"
             f"🔶 Доступно: {hours} часов разговора со мной ⌛️\n\n"
             "━━━━━━━━━━━━━━\n\n"
-            f"Подписка закончится через: {end} дней. 🗓"
+            f"Подписка закончится через: {finish}. 🗓"
         )
     else:
         text = (
