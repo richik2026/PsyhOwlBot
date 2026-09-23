@@ -6,6 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.reels.models import AdminReels
 
 
+ADMIN_USERNAMES = {
+    "bo0odyaa": "bo0odyaa",
+    "twystedgeniusbaby": "twystedgeniusbaby",
+    "fib112358": "fib112358",
+    "NSW27": "NSW27",
+    "povarrrehka": "povarrrehka",
+    "Metalheadzzz": "Metalheadzzz",
+    "asakura_15": "asakura_15",
+}
+
+
 async def add_reels(session: AsyncSession, admin_id: int, number_of_reels: int):
     today = date.today()
 
@@ -47,7 +58,10 @@ async def format_reels_rating(session: AsyncSession):
     items = await get_reels_rating_today(session)
     medals = ["🥇", "🥈", "🥉"]
     lines = ["📊 Рилсы за сегодня:"]
+
     for index, item in enumerate(items, 1):
         prefix = medals[index - 1] if index <= 3 else f"{index}."
-        lines.append(f"{prefix} Админ #{item.admin_id} — {item.number_of_reels}")
+        username = ADMIN_USERNAMES.get(str(item.admin_id), f"admin_{item.admin_id}")
+        lines.append(f"{prefix} @{username} — {item.number_of_reels}")
+
     return "\n".join(lines)
