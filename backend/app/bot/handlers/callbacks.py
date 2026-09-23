@@ -3,10 +3,9 @@ from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.admins.dashboard import format_admin_dashboard, get_admin_dashboard
-from app.admins.service import get_admin_by_telegram_id, ensure_whitelist_admin
-from app.bot.keyboards.admin import admin_menu
+from app.bot.handlers.admin import _send_admin_panel
 from app.bot.states.reels import ReelsStates
+from app.admins.service import get_admin_by_telegram_id, ensure_whitelist_admin
 
 router = Router()
 
@@ -24,26 +23,7 @@ async def is_admin(session: AsyncSession, telegram_id: int, username: str | None
 
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel_callback(callback: CallbackQuery, session: AsyncSession):
-    admin = await get_admin_by_telegram_id(session, callback.from_user.id)
-
-    if admin is None:
-        admin = await ensure_whitelist_admin(
-            session,
-            telegram_id=callback.from_user.id,
-            username=callback.from_user.username,
-        )
-
-    if not admin or not admin.is_active:
-        await callback.answer("Эта команда доступна только администраторам", show_alert=True)
-        return
-
-    data = await get_admin_dashboard(session, admin)
-
-    await callback.message.edit_text(
-        format_admin_dashboard(data),
-        parse_mode="HTML",
-        reply_markup=admin_menu(),
-    )
+    await _send_admin_panel(callback.message, session)
     await callback.answer()
 
 
