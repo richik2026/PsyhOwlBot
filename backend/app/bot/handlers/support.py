@@ -20,27 +20,25 @@ class SupportStates(StatesGroup):
 
 
 def support_claim_keyboard(message_id: int):
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-        text="💬 Ответить",
-        callback_data=f"support_claim:{message_id}"
-    )]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💬 Ответить", callback_data=f"support_claim:{message_id}")]])
 
 
 def back_menu_keyboard():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-        text="↩️ В главное меню",
-        callback_data="main_menu"
-    )]])
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="↩️ В главное меню", callback_data="main_menu")]])
 
 
-@router.message(F.text == "🆘 Техподдержка")
-async def support_handler(message: Message, state: FSMContext):
+async def send_support_prompt(message: Message, state: FSMContext):
     await state.set_state(SupportStates.waiting_message)
     await message.answer(
         "📨 <b>Техническая поддержка Совёнка</b>\n\n"
         "Напиши свой вопрос одним сообщением.",
         parse_mode="HTML"
     )
+
+
+@router.message(F.text == "🆘 Техподдержка")
+async def support_handler(message: Message, state: FSMContext):
+    await send_support_prompt(message, state)
 
 
 @router.message(SupportStates.waiting_message, F.text)
@@ -77,10 +75,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         return
 
     message_id = int(callback.data.split(":", 1)[1])
-
-    result = await session.execute(select(SupportMessage).where(
-        SupportMessage.support_message_id == message_id
-    ))
+    result = await session.execute(select(SupportMessage).where(SupportMessage.support_message_id == message_id))
     ticket = result.scalar_one_or_none()
 
     if not ticket:
@@ -88,12 +83,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
         return
 
     if ticket.admin_id:
-        existing = await get_admin_by_telegram_id(session, ticket.admin_id)
-        username = existing.username if existing and existing.username else str(ticket.admin_id)
-        await callback.answer(
-            f"⚠️ Это обращение уже взял в обработку админ @{username}",
-            show_alert=True
-        )
+        await callback.answer("⚠️ Это обращение уже взял в обработку админ", show_alert=True)
         return
 
     ticket.admin_id = callback.from_user.id
@@ -101,20 +91,10 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
     await session.commit()
 
     username = callback.from_user.username or str(callback.from_user.id)
-
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n"
-        "✅ <b>Взято в работу</b>\n"
-        f"Администратор: @{escape(username)}",
+        callback.message.html_text + "\n\n✅ <b>Взято в работу</b>\nАдминистратор: @" + escape(username),
         parse_mode="HTML",
         reply_markup=None
-    )
-
-    await callback.message.bot.send_message(
-        SUPPORT_GROUP_ID,
-        "✅ <b>Обращение принято в работу</b>\n\n"
-        f"Администратор @{escape(username)} начал обработку обращения.",
-        parse_mode="HTML"
     )
 
     await callback.answer("Напишите ответ следующим сообщением в группе")
@@ -123,7 +103,7 @@ async def support_claim(callback: CallbackQuery, session: AsyncSession):
 @router.message(F.chat.id == SUPPORT_GROUP_ID, F.text)
 async def admin_support_answer(message: Message, session: AsyncSession):
     admin = await get_admin_by_telegram_id(session, message.from_user.id)
-    if not admin or admin.role not in {"ADMIN", "SUPER_ADMIN"}:
+    if not admin:
         return
 
     result = await session.execute(select(SupportMessage).where(
@@ -137,8 +117,7 @@ async def admin_support_answer(message: Message, session: AsyncSession):
 
     await message.bot.send_message(
         ticket.user_id,
-        "💬 <b>Ответ поддержки:</b>\n\n"
-        f"{escape(message.text)}",
+        "💬 <b>Ответ поддержки:</b>\n\n" + escape(message.text),
         parse_mode="HTML"
     )
 
