@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +8,14 @@ from app.support.models import SupportMessage
 router = Router()
 
 SUPPORT_GROUP_ID = -1004387840594
+
+
+def support_claim_keyboard(message_id: int):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✏️ Взять в обработку", callback_data=f"support_claim:{message_id}")]
+        ]
+    )
 
 
 @router.message(F.text == "🆘 Техподдержка")
@@ -56,9 +64,9 @@ async def support_relay(message: Message, session: AsyncSession) -> None:
         SUPPORT_GROUP_ID,
         "❗️ <b>ВНИМАНИЕ, НОВОЕ ОБРАЩЕНИЕ!</b>\n\n"
         f"💔 Пользователь: @{message.from_user.username or 'username'}\n\n"
-        f"💬 {message.text}\n\n"
-        f"👤 <i>Взято в обработку админом @{message.from_user.username or 'username'}</i>",
+        f"💬 {message.text}",
         parse_mode="HTML",
+        reply_markup=support_claim_keyboard(0),
     )
 
     session.add(
