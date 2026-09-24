@@ -143,7 +143,7 @@ async def userstop(message: Message, session: AsyncSession):
 
         lines.append(
             f"{medal} <b>{index} место</b> — {username}\n"
-            f"👥 Пользователей: {row.users_count}\n"
+            f"👥 Пользователей: {row.users_count}\n\n"
         )
 
 
@@ -226,7 +226,7 @@ async def moneytop(message: Message, session: AsyncSession):
         lines.append(
             f"{medal} <b>{index} место</b> — {username}\n"
             f"👥 Покупателей: {row.sales_count}\n"
-            f"💳 Сумма: {row.money} ₽"
+            f"💳 На сумму: {row.money} ₽\n\n"
         )
 
 
