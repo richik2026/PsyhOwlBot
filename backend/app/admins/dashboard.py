@@ -58,7 +58,7 @@ async def get_admin_dashboard(session: AsyncSession, admin: Admin) -> dict:
 
 def format_admin_dashboard(data: dict) -> str:
     return (
-        "🦉 <b>Комнада Администратора</b> 🦉\n"
+        "🦉 <b>Комната Администратора</b> 🦉\n"
         "—————————————————\n"
         f"👑 Должность: {data['role']}\n"
         "—————————————————\n"
