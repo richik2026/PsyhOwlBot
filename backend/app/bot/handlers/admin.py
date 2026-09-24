@@ -126,7 +126,7 @@ async def userstop(message: Message, session: AsyncSession):
     rows = result.all()
 
     lines = [
-        "🏆 <b>Топ администраторов по приглашённым пользователям</b>\n",
+        "🏆 <b>Топ администраторов по приглашённым пользователям</b>\n\n",
         ""
     ]
 
@@ -207,7 +207,7 @@ async def moneytop(message: Message, session: AsyncSession):
 
 
     lines = [
-        "💰 <b>Топ администраторов по продаже подписок</b>\n",
+        "💰 <b>Топ администраторов по продаже подписок</b>\n\n",
         ""
     ]
 
