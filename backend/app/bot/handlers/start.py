@@ -74,7 +74,7 @@ async def start_handler(message: Message, session: AsyncSession):
             "🤍 <b>Меня зовут Криш</b>\n\n"
             "Я — современный инновационный психологический друг 🦉"
             "Меня обучали на материалах лучших мировых университетов, таких как:\n"
-            "----------------------"
+            "----------------------\n"
             "📚 Yale University — Introduction to Psychology (Paul Bloom)\n"
             "📚 MIT — Introduction to Psychology (9.00SC)\n"
             "📚 Cognitive Psychology / Human Behavior (Stanford University)\n"
