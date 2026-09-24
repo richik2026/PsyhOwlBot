@@ -66,7 +66,7 @@ def format_admin_dashboard(data: dict) -> str:
         f"💷 Из них оплатили: {data['subscriptions_count']}\n"
         f"💰 На сумму: {data['revenue']} ₽\n"
         "—————————————————\n"
-        f"🔝 Место в рейтинге: {data['rating_place']}\n\n"
+        f"🔝 Место в рейтинге: {data['rating_place']}\n"
         "—————————————————\n"
         f"🎬 Всего опубликовано Reels: {data['reels_count']}"
     )
