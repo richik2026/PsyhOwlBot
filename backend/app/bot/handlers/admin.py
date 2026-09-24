@@ -143,7 +143,7 @@ async def userstop(message: Message, session: AsyncSession):
 
         lines.append(
             f"{medal} <b>{index} место</b> — {username}\n"
-            f"👥 Пользователей: {row.users_count}"
+            f"👥 Пользователей: {row.users_count}\n"
         )
 
 
