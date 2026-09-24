@@ -25,10 +25,14 @@ async def get_subscription(session: AsyncSession, user_id: int):
 
 @router.message(CommandStart())
 async def start_handler(message: Message, session: AsyncSession):
-    args = message.text.split(maxsplit=1)
+    args = (message.text or "").split(maxsplit=1)
     start_parameter = args[1] if len(args) > 1 else None
 
-    await resolve_referrer_admin_id(session, start_parameter)
+    try:
+        referrer_admin_id = await resolve_referrer_admin_id(session, start_parameter)
+    except Exception:
+        referrer_admin_id = None
+
     admin = await ensure_whitelist_admin(
         session,
         telegram_id=message.from_user.id,
@@ -40,6 +44,7 @@ async def start_handler(message: Message, session: AsyncSession):
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        referrer_admin_id=referrer_admin_id,
     )
 
     subscription = await get_subscription(session, user.id)
@@ -66,7 +71,7 @@ async def start_handler(message: Message, session: AsyncSession):
             "🔶 Подписка: <u><i>Активна</i></u>✅\n"
             f"🔶 Доступно: <u><i>{hours} часов</i></u> разговора со мной ⌛️\n"
             "━━━━━━━━━━━━━━\n"
-            f"Подписка закончится через: <u><i>{finish}</i></u>. 🗓"
+            f"Подписка закончится через: <u><i>{finish}</i></i></u>. 🗓"
         )
     else:
         text = (
