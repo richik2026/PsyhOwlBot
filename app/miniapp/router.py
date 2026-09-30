@@ -1,5 +1,6 @@
 import os
 import json
+from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -35,16 +36,28 @@ async def auth(payload: MiniAppAuthRequest):
             detail="BOT_TOKEN not configured"
         )
 
-    if not verify_init_data(
-        payload.init_data,
-        bot_token
-    ):
+    if not verify_init_data(payload.init_data, bot_token):
         raise HTTPException(
             status_code=401,
             detail="Invalid Telegram initData"
         )
 
+    data = dict(parse_qsl(payload.init_data))
+
+    telegram_user = {}
+
+    if data.get("user"):
+        telegram_user = json.loads(data["user"])
+
     return {
         "authenticated": True,
-        "service": "sovenok-miniapp"
+        "service": "sovenok-miniapp",
+        "telegram": {
+            "id": telegram_user.get("id"),
+            "username": telegram_user.get("username"),
+            "first_name": telegram_user.get("first_name")
+        },
+        "voice": {
+            "enabled": True
+        }
     }
